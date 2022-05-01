@@ -1,6 +1,6 @@
 module github.com/ClusterLabs/hawk-apiserver
 
-go 1.13
+go 1.17
 
 require (
 	github.com/ClusterLabs/go-pacemaker v0.0.0-20190227130546-72ac078bff0a
