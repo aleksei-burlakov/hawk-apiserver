@@ -8,3 +8,7 @@ require (
 	github.com/stretchr/testify v1.4.0
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 )
+
+replace (
+	github.com/aleksei-burlakov/go-pacemaker => /root/Workspace/go-pacemaker
+)
