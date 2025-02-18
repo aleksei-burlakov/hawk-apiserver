@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/ClusterLabs/hawk-apiserver/internal"
-	"github.com/ClusterLabs/hawk-apiserver/server"
+	"github.com/aleksei-burlakov/hawk-apiserver/internal"
+	"github.com/aleksei-burlakov/hawk-apiserver/server"
 	log "github.com/sirupsen/logrus"
 )
 
