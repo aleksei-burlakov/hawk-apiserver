@@ -43,62 +43,57 @@ func (acib *AsyncCib) Start() {
 
 	cibFile := os.Getenv("CIB_file")
 
-	cibFetcher := func() {
-		for {
-			var cib *pacemaker.Cib
-			var err error
-			if cibFile != "" {
-				cib, err = pacemaker.OpenCib(pacemaker.FromFile(cibFile))
-			} else {
-				cib, err = pacemaker.OpenCib()
+	var cib *pacemaker.Cib
+
+	var err error
+	if cibFile != "" {
+		cib, err = pacemaker.OpenCib(pacemaker.FromFile(cibFile))
+	} else {
+		cib, err = pacemaker.OpenCib()
+	}
+	if err != nil {
+		msg = fmt.Sprintf("Failed to connect to Pacemaker: %v", err)
+		if msg != lastLog.warning {
+			log.Warnf(msg)
+			lastLog.warning = msg
+		}
+		time.Sleep(5 * time.Second)
+	}
+	for cib != nil {
+
+		cibxml, err := cib.Query()
+		if err != nil {
+			msg = fmt.Sprintf("Failed to query CIB: %v", err)
+			if msg != lastLog.error {
+				log.Errorf(msg)
+				lastLog.error = msg
 			}
-			if err != nil {
-				msg = fmt.Sprintf("Failed to connect to Pacemaker: %v", err)
+		} else {
+			acib.notifyNewCib(cibxml)
+		}
+
+		waiter := make(chan int)
+		_, err = cib.Subscribe(func(event pacemaker.CibEvent, doc *pacemaker.CibDocument) {
+			if event == pacemaker.UpdateEvent {
+				acib.notifyNewCib(doc)
+			} else {
+				msg = fmt.Sprintf("lost connection: %v", event)
 				if msg != lastLog.warning {
 					log.Warnf(msg)
 					lastLog.warning = msg
 				}
-				time.Sleep(5 * time.Second)
+				waiter <- 1
 			}
-			for cib != nil {
-				func() {
-					cibxml, err := cib.Query()
-					if err != nil {
-						msg = fmt.Sprintf("Failed to query CIB: %v", err)
-						if msg != lastLog.error {
-							log.Errorf(msg)
-							lastLog.error = msg
-						}
-					} else {
-						acib.notifyNewCib(cibxml)
-					}
-				}()
-
-				waiter := make(chan int)
-				_, err = cib.Subscribe(func(event pacemaker.CibEvent, doc *pacemaker.CibDocument) {
-					if event == pacemaker.UpdateEvent {
-						acib.notifyNewCib(doc)
-					} else {
-						msg = fmt.Sprintf("lost connection: %v", event)
-						if msg != lastLog.warning {
-							log.Warnf(msg)
-							lastLog.warning = msg
-						}
-						waiter <- 1
-					}
-				})
-				if err != nil {
-					log.Infof("Failed to subscribe, rechecking every 5 seconds")
-					time.Sleep(5 * time.Second)
-				} else {
-					<-waiter
-				}
-			}
+		})
+		if err != nil {
+			log.Infof("Failed to subscribe, rechecking every 5 seconds")
+			time.Sleep(5 * time.Second)
+		} else {
+			<-waiter
 		}
 	}
 
-	go cibFetcher()
-	go pacemaker.Mainloop()
+	//go pacemaker.Mainloop()
 }
 
 // Wait blocks for up to `timeout` seconds for a CIB change event.
