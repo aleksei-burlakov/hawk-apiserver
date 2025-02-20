@@ -10,8 +10,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ClusterLabs/hawk-apiserver/cib"
-	"github.com/ClusterLabs/hawk-apiserver/server"
+	"github.com/aleksei-burlakov/hawk-apiserver/cib"
+	"github.com/aleksei-burlakov/hawk-apiserver/server"
 	log "github.com/sirupsen/logrus"
 )
 

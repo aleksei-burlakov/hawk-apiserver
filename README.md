@@ -1,7 +1,7 @@
 # Hawk API Server
 
-[![GoDoc](https://godoc.org/github.com/ClusterLabs/hawk-apiserver?status.svg)](https://godoc.org/github.com/ClusterLabs/hawk-apiserver)
-[![Go Report Card](https://goreportcard.com/badge/github.com/ClusterLabs/hawk-apiserver)](https://goreportcard.com/report/github.com/ClusterLabs/hawk-apiserver)
+[![GoDoc](https://godoc.org/github.com/aleksei-burlakov/hawk-apiserver?status.svg)](https://godoc.org/github.com/aleksei-burlakov/hawk-apiserver)
+[![Go Report Card](https://goreportcard.com/badge/github.com/aleksei-burlakov/hawk-apiserver)](https://goreportcard.com/report/github.com/aleksei-burlakov/hawk-apiserver)
 
 HTTPS API server / minimalist web proxy for Hawk.
 
@@ -15,13 +15,13 @@ HTTPS API server / minimalist web proxy for Hawk.
 # Rationale
 This project currently provides a minimalistic web server which
 handles SSL certificate termination, proxying and static file serving
-for [HAWK](https://github.com/ClusterLabs/hawk)
+for [HAWK](https://github.com/aleksei-burlakov/hawk)
 
 The **primary goal** for this project is to provide the minimal web server
 needed by Hawk while consuming as few system resources as
 possible. Second, it provides the `/monitor` API endpoint which
 handles long-lived connections from the frontend to enable instant
-updates of the interface on cluster events, leveraged by [go-pacemaker](https://github.com/ClusterLabs/go-pacemaker)
+updates of the interface on cluster events, leveraged by [go-pacemaker](https://github.com/aleksei-burlakov/go-pacemaker)
 
 The API server is still under its basic development phase.
 

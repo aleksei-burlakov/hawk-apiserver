@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	pacemaker "github.com/ClusterLabs/go-pacemaker"
+	pacemaker "github.com/aleksei-burlakov/go-pacemaker"
 	log "github.com/sirupsen/logrus"
 )
 
