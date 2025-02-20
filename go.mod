@@ -7,7 +7,3 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.7.0
 )
-
-replace (
-	github.com/aleksei-burlakov/go-pacemaker => /root/Workspace/go-pacemaker
-)
