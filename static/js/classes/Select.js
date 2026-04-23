@@ -6,7 +6,7 @@ class Select {
   #selectEl;
   #optionsMap;
   #apiEntryGetOptions;
-  #apiEntrySetOptions; // Not used (yet), #TODO: reimplement the schema so that it's being used
+  #apiEntrySetOptions; // Not used (yet), #TODO??: reimplement the schema so that it's being used
   #name;
   #enabled;
   #cibID; // e.g. ID in <nvpair id="dummy1-meta_attributes-allow-migrate" name="allow-migrate" value=""/>

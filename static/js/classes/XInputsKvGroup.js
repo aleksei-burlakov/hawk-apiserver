@@ -1,4 +1,4 @@
-class XInputsKvGroup extends window.XKvGroupBase {
+class XInputsKvGroup extends XKvGroupBase {
   #container;
   #name;
   #inputs = [];
@@ -56,7 +56,7 @@ class XInputsKvGroup extends window.XKvGroupBase {
     // Fetch data
     this.#init()
       .catch(err => console.error("Failed to init x-kvgroup:", err))
-      .finally(() => this.#readyResolve()); // TODO: what is () in #readyResolve() ?
+      .finally(() => this.#readyResolve());
   }
 
   #init(appendBlank) {
@@ -75,7 +75,6 @@ class XInputsKvGroup extends window.XKvGroupBase {
           const name = pair.name;
           const cibValue = pair.value;
 
-          // TODO: test
           this.#createInput(name, "", "", "", "", false, "", cibValue, "");
         });
       });

@@ -1,6 +1,5 @@
 
-/* for the lense pop-up.
-TODO: move it to a layout-modal.css */
+/* for the lense pop-up. */
 .modal {
   position: fixed;
   z-index: 1000;

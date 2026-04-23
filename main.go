@@ -107,6 +107,15 @@ func main() {
 	mux.HandleFunc("/api/cib/primitive/update", authMiddleware(api.PrimitiveUpdateHandler)) // Can't find where it was used (let's not remove it though)
 	mux.HandleFunc("/api/cib/primitive/rename", authMiddleware(api.PrimitiveRenameHandler))
 	mux.HandleFunc("/api/cib/primitive/delete", authMiddleware(api.PrimitiveDeleteHandler))
+	mux.HandleFunc("/api/cib/primitive/stop", authMiddleware(api.PrimitiveStopHandler))
+	mux.HandleFunc("/api/cib/primitive/start", authMiddleware(api.PrimitiveStartHandler))
+	mux.HandleFunc("/api/cib/primitive/promote", authMiddleware(api.PrimitivePromoteHandler))
+	mux.HandleFunc("/api/cib/primitive/demote", authMiddleware(api.PrimitiveDemoteHandler))
+	mux.HandleFunc("/api/cib/primitive/maintenance-on", authMiddleware(api.PrimitiveMaintenanceOnHandler))
+	mux.HandleFunc("/api/cib/primitive/maintenance-off", authMiddleware(api.PrimitiveMaintenanceOffHandler))
+	mux.HandleFunc("/api/cib/primitive/migrate", authMiddleware(api.PrimitiveMigrateHandler))
+	mux.HandleFunc("/api/cib/primitive/cleanup", authMiddleware(api.PrimitiveCleanupHandler))
+	mux.HandleFunc("/api/cib/primitive/clear", authMiddleware(api.PrimitiveClearHandler))
 	mux.HandleFunc("/api/data-interface/fetch-cluster-details", authMiddleware(api.FetchClusterDetails))
 	mux.HandleFunc("/api/data-interface/fetch-resource-classes", authMiddleware(api.FetchResourceClasses))
 	mux.HandleFunc("/api/data-interface/fetch-resource-providers", authMiddleware(api.FetchResourceProviders))
@@ -121,9 +130,15 @@ func main() {
 	mux.HandleFunc("/api/data-interface/submit-resource-utilizations", authMiddleware(api.SubmitResourceUtilizations))
 	mux.HandleFunc("/api/data-interface/resource-operation/fetch-attributes", authMiddleware(api.FetchResourceOperationAttributes))
 
-	// Register BOTH /cib/live/primitives and /cib/live/primitives/ to avoid a conflicts with Ruby
+	// Register BOTH /cib/live/primitives and /cib/live/primitives/ to avoid conflicts with Ruby
 	mux.HandleFunc("/cib/live/primitives", authMiddleware(api.ResourceEditHandler))
 	mux.HandleFunc("/cib/live/primitives/", authMiddleware(api.ResourceEditHandler))
+	mux.HandleFunc("/api/cib/node/maintenance-on", authMiddleware(api.NodeMaintenanceOnHandler))
+	mux.HandleFunc("/api/cib/node/maintenance-off", authMiddleware(api.NodeMaintenanceOffHandler))
+	mux.HandleFunc("/api/cib/node/standby-on", authMiddleware(api.NodeStandbyOnHandler))
+	mux.HandleFunc("/api/cib/node/standby-off", authMiddleware(api.NodeStandbyOffHandler))
+	mux.HandleFunc("/api/cib/node/fence", authMiddleware(api.NodeFenceHandler))
+	mux.HandleFunc("/api/cib/node/clearstate", authMiddleware(api.NodeClearstateHandler))
 
 	mux.HandleFunc("/cib/live/nodes", authMiddleware(api.NodesEditHandler))
 	mux.HandleFunc("/cib/live/nodes/", authMiddleware(api.NodesEditHandler))
@@ -131,9 +146,11 @@ func main() {
 	mux.HandleFunc("/api/data-interface/submit-node-attributes", authMiddleware(api.SubmitNodeAttributes))
 	mux.HandleFunc("/api/data-interface/fetch-node-utilizations", authMiddleware(api.FetchNodeUtilizations))
 	mux.HandleFunc("/api/data-interface/submit-node-utilizations", authMiddleware(api.SubmitNodeUtilizations))
+	mux.HandleFunc("/api/data-interface/fetch-node-fence-history", authMiddleware(api.FetchNodeFencingHistory))
 
 	mux.HandleFunc("/api/data-interface/fetch-crm-status", authMiddleware(api.FetchCrmStatus))
-	mux.HandleFunc("/api/data-interface/fetch-cibadmin-Ql", authMiddleware(api.FetchCibadminQl))
+	mux.HandleFunc("/api/data-interface/fetch-cib-resources", authMiddleware(api.FetchCibResources))
+	mux.HandleFunc("/cib/live", authMiddleware(api.LiveStatusHandler))
 
 	mux.Handle("/", routehandler) // routehandler is a fallback
 

@@ -27,7 +27,7 @@
       width: 60%;
       display: flex;
       align-items: center;
-      gap: 2px;
+      gap: 0;
     }
 
     .kv-control .form-control,
@@ -35,6 +35,9 @@
     .kv-control select {
       flex: 1 1 auto;
       width: auto;
+      min-width: 0;
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
     }
 
     /* FIX: prevent empty labels (like in the "+" row) from affecting row height */
@@ -53,6 +56,15 @@
       border-radius: 4px;
       cursor: pointer;
       padding: 6px;
+    }
+
+    .kv-control button.btn {
+      align-self: stretch;
+      margin-left: -1px;
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+      border-top-right-radius: 4px;
+      border-bottom-right-radius: 4px;
     }
 
     button.btn i {

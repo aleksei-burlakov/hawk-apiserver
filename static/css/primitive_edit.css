@@ -9,8 +9,6 @@
 .kvsection-row {
   display: flex;
   align-items: center;
-  /* TODO: there should be not gap between button and select/input 
-   * but the gap between label and select/inpus should stay */
   gap: 26px;
   margin-bottom: 8px;
 }
