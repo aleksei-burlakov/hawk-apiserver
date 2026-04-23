@@ -1,0 +1,85 @@
+{{ define "content" }}
+<script src="/static/js/classes/XAlert.js"></script>
+<script src="/static/js/classes/ConfirmActionPopup.js"></script>
+<script src="/static/js/classes/ResourceCleanupPopup.js"></script>
+<script src="/static/js/classes/ResourceDetailsPopup.js"></script>
+<script src="/static/js/classes/NodeDetailsPopup.js"></script>
+<script src="/static/js/classes/ResourceMigrationPopup.js"></script>
+<script src="/static/js/classes/RecentEventsPopup.js"></script>
+<script src="/static/js/classes/RAInfoPopup.js"></script>
+<script src="/static/js/live_status.js" defer></script>
+
+<div class="edit-root">
+  <x-alert id="status-alert" visible="false"></x-alert>
+
+  <h1><i class="fa fa-heartbeat page"></i> Status <small id="cluster-name"></small></h1>
+
+  <div id="cluster-status-alarm" class="hidden">
+    <a href="/cib/live/crm_config/edit"></a>
+  </div>
+
+  <div class="panel panel-default with-nav-tabs status-panel">
+    <div class="panel-heading">
+      <ul class="nav nav-tabs" role="tablist">
+        <li class="active" role="presentation">
+          <a href="#resources" role="tab" data-toggle="tab" aria-controls="resources">Resources
+            <span class="badge" data-link="resource_count" id="resources-count"></span>
+          </a>
+        </li>
+        <li role="presentation">
+          <a href="#nodes" role="tab" data-toggle="tab" aria-controls="nodes">Nodes
+            <span class="badge" data-link="nodes.length" id="nodes-count">1</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="panel-body">
+      <div class="tab-content">
+
+        <!-- RESOURCES TAB -->
+        <div class="tab-pane active" id="resources" role="tabpanel">
+          <table class="table table-bordered">
+            <colgroup>
+              <col style="width: 32px;">
+              <col style="width: 8%;">
+              <col style="width: 31%;">
+              <col style="width: 25%;">
+              <col style="width: 17%;">
+              <col style="width: 19%;">
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="detail"><div class="fht-cell"></div></th>
+                <th><div class="th-inner ">Status</div><div class="fht-cell"></div></th>
+                <th><div class="th-inner ">Name</div><div class="fht-cell"></div></th>
+                <th><div class="th-inner ">Location</div><div class="fht-cell"></div></th>
+                <th class="col-sm-2"><div class="th-inner ">Type</div><div class="fht-cell"></div></th>
+                <th class="col-sm-2"><div class="th-inner ">Operations</div><div class="fht-cell"></div></th>
+              </tr>
+            </thead>
+            <tbody id="resources-tbody"><!-- PLACEHOLDER --></tbody>
+          </table>
+        </div>
+
+        <!--  THE NODES TAB -->
+        <div class="tab-pane" id="nodes" role="tabpanel">
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th><div class="th-inner ">Status</div></th>
+                <th><div class="th-inner ">Name</div></th>
+                <th><div class="th-inner ">Maintenance</div></th>
+                <th><div class="th-inner ">Standby</div></th>
+                <th><div class="th-inner ">Operations</div></th>
+              </tr>
+            </thead>
+            <tbody id="nodes-tbody"><!-- PLACEHOLDER --></tbody>
+          </table>
+        </div>
+
+      </div>
+  </div>
+</div>
+
+{{ end }}

@@ -22,6 +22,11 @@ body, html {
   min-height: 0;
 }
 
+.fa-status-small {
+    font-size: 60%;
+    vertical-align: top;
+}
+
 main.main {
   flex: 1;
   overflow: hidden;
@@ -84,6 +89,10 @@ main.main > .content {
 
 .table-container {
   padding: 0 20px;
+}
+
+table tr th {
+  text-align: center;
 }
 
 code {
@@ -159,6 +168,12 @@ fieldset[disabled]:focus,
   background: white;
 }
 
+.dropdown-menu-center {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+
 .btn-success {
   background-color: #00c081;
   color: white;
@@ -173,4 +188,91 @@ fieldset[disabled]:focus,
 
 .text-danger {
   color: #f44336;
+}
+
+.text-online {
+  color: #00c081;
+}
+
+/* the full right part inside content*/
+.edit-root {
+  padding-top: 15px;
+  padding-left: 30px;
+  padding-right: 30px;
+}
+
+h1 {
+  margin: 10px 0px;
+  font-size: 1.4em;
+  line-height: 2.0em;
+}
+
+#cluster-status-alarm {
+  max-width: 872px;
+  margin-bottom: 20px;
+}
+
+#cluster-status-alarm.alert {
+  padding: 8px 15px;
+}
+
+#cluster-status-alarm a {
+  text-decoration: none;
+}
+
+.status-panel > .panel-heading {
+  border-bottom: 0;
+  padding: 6px 6px 0;
+}
+
+.status-panel > .panel-heading > .nav-tabs {
+  border-bottom: 0;
+}
+
+.status-panel > .panel-body {
+  padding-top: 10px;
+}
+
+.status-panel .table {
+  margin-bottom: 0;
+}
+
+.status-panel .table th,
+.status-panel .table td {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  vertical-align: middle;
+}
+
+#resources .table th.detail,
+#resources .table td.detail {
+  width: 32px;
+  min-width: 32px;
+  max-width: 32px;
+  padding-left: 8px;
+  padding-right: 8px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+#resources-tbody > tr:nth-child(odd) > td {
+  background-color: #f7f7f7;
+}
+
+#resources-tbody > tr:nth-child(even) > td {
+  background-color: #fff;
+}
+
+.resource-detail-table th,
+.resource-detail-table td {
+  text-align: center;
+  vertical-align: middle !important;
+}
+
+#nodes-tbody > tr:nth-child(odd) > td {
+  background-color: #f7f7f7;
+}
+
+#nodes-tbody > tr:nth-child(even) > td {
+  background-color: #fff;
 }

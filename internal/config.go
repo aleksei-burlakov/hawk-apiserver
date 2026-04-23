@@ -57,11 +57,11 @@ type Config struct {
 //
 // Possible handlers (this list may be outdated)a:
 //
-//   * `api/v1` - Exposes a CIB API endpoint.
-//   * `monitor` - Typically mapped to `/monitor` to handle
+//   - `api/v1` - Exposes a CIB API endpoint.
+//   - `monitor` - Typically mapped to `/monitor` to handle
 //     long-polling for CIB updates.
-//   * `file` - A static file serving route mapped to a directory.
-//   * `proxy` - Proxies requests to another server.
+//   - `file` - A static file serving route mapped to a directory.
+//   - `proxy` - Proxies requests to another server.
 type ConfigRoute struct {
 	Handler string  `json:"handler"`
 	Path    string  `json:"path"`

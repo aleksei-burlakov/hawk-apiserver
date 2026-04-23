@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"html/template"
 	"log"
@@ -32,100 +33,6 @@ func renderTemplate(w http.ResponseWriter, name string, data map[string]any) {
 }
 
 /***************************
- * crm status --as-xml
- ***************************/
-
-type CrmStatus struct {
-	XMLName   xml.Name   `xml:"crm_mon"`
-	Nodes     []CrmNode  `xml:"nodes>node"`
-	Resources []CrmRsc   `xml:"resources>resource"`
-	Clones    []CrmClone `xml:"resources>clone"`
-}
-
-type CrmNode struct {
-	Name        string `xml:"name,attr"`
-	ID          string `xml:"id,attr"`
-	Online      bool   `xml:"online,attr"`
-	Maintenance bool   `xml:"maintenance,attr"`
-}
-
-type CrmRsc struct {
-	ID             string       `xml:"id,attr"`
-	ResourceAgent  string       `xml:"resource_agent,attr"`
-	Role           string       `xml:"role,attr"`
-	TargetRole     string       `xml:"target_role,attr"`
-	Active         bool         `xml:"active,attr"`
-	Orphaned       bool         `xml:"orphaned,attr"`
-	Blocked        bool         `xml:"blocked,attr"`
-	Maintenance    bool         `xml:"maintenance,attr"`
-	Managed        bool         `xml:"managed,attr"`
-	Faield         bool         `xml:"failed,attr"`
-	FailureIgnored bool         `xml:"failure_ignored,attr"`
-	NodesRunningOn bool         `xml:"nodes_running_on,attr"`
-	Nodes          []CrmRscNode `xml:"node"`
-}
-
-type CrmClone struct {
-	ID             string   `xml:"id,attr"`
-	MultiState     bool     `xml:"multi_state,attr"`
-	Unique         bool     `xml:"unique,attr"`
-	Maintenance    bool     `xml:"maintenance,attr"`
-	Managed        bool     `xml:"managed,attr"`
-	Disabled       bool     `xml:"disabled,attr"`
-	Failed         bool     `xml:"failed,attr"`
-	FailureIgnored bool     `xml:"failure_ignored,attr"`
-	Resources      []CrmRsc `xml:"resource"`
-}
-
-type CrmRscNode struct {
-	Name   string `xml:"name,attr"`
-	ID     string `xml:"id,attr"`
-	Cached bool   `xml:"cached,attr"`
-}
-
-func GetCrmStatus() (CrmStatus, error) {
-	cmd := exec.Command("crm", "status", "--as-xml")
-	output, err := cmd.Output()
-	if err != nil {
-		return CrmStatus{}, err
-	}
-
-	var crm CrmStatus
-	if err := xml.Unmarshal(output, &crm); err != nil {
-		return CrmStatus{}, err
-	}
-
-	return crm, nil
-}
-
-type CrmResourceRow struct {
-	ID          string
-	Type        string
-	Node        string
-	Status      string
-	Maintenance bool
-}
-
-// flatten the CrmStatus for the easier UI
-func ToCrmResourceRows(crm CrmStatus) []CrmResourceRow {
-	var rows []CrmResourceRow
-	for _, rsc := range crm.Resources {
-		nodeName := ""
-		if len(rsc.Nodes) > 0 {
-			nodeName = rsc.Nodes[0].Name
-		}
-		rows = append(rows, CrmResourceRow{
-			ID:          rsc.ID,
-			Type:        rsc.ResourceAgent,
-			Node:        nodeName,
-			Status:      rsc.Role,
-			Maintenance: rsc.Maintenance,
-		})
-	}
-	return rows
-}
-
-/***************************
  * cibadmin -Ql
  ***************************/
 
@@ -145,11 +52,33 @@ type CIB struct {
 	Status         Status        `xml:"status"`
 }
 
+func GetCIB() (CIB, int, error) {
+	cmd := exec.Command("cibadmin", "-Ql")
+	output, err := cmd.Output()
+	if err != nil {
+		pacemakerRC := 0
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			pacemakerRC = exitErr.ExitCode()
+		}
+
+		return CIB{}, pacemakerRC, fmt.Errorf("cibadmin -Ql failed: %w", err)
+	}
+
+	var cib CIB
+	if err := xml.Unmarshal(output, &cib); err != nil {
+		return CIB{}, 0, err
+	}
+
+	return cib, 0, nil
+}
+
 type Configuration struct {
 	CrmConfig   CrmConfig   `xml:"crm_config"`
 	Nodes       []Node      `xml:"nodes>node"`
 	Constraints Constraints `xml:"constraints"`
 	Primitives  []Primitive `xml:"resources>primitive"`
+	Clones      []Clone     `xml:"resources>clone"`
 }
 
 type CrmConfig struct {
@@ -210,6 +139,11 @@ type Primitive struct {
 	InstanceAttributes InstanceAttribute `xml:"instance_attributes" json:"instance_attributes"`
 	Operations         []Operation       `xml:"operations>op" json:"operations"`
 	Utilizations       []Nvpair          `xml:"utilization>nvpair" json:"utilizations"`
+}
+
+type Clone struct {
+	ID         string      `xml:"id,attr" json:"id"`
+	Primitives []Primitive `xml:"primitive"`
 }
 
 type MetaAttribute struct {
@@ -283,17 +217,18 @@ type LRMOp struct {
 }
 
 type ResourceRow struct {
-	ID             string
-	Class          string
-	Provider       string
-	Type           string
-	Node           string
-	Status         string
-	TargetRole     string
-	Constraints    Constraints
-	MetaAttributes []Nvpair
-	Events         []LRMOp
-	Utilizations   []Nvpair
+	ID                 string
+	Class              string
+	Provider           string
+	Type               string
+	Node               string
+	Status             string
+	TargetRole         string
+	Constraints        Constraints
+	InstanceAttributes []Nvpair
+	MetaAttributes     []Nvpair
+	Events             []LRMOp
+	Utilizations       []Nvpair
 }
 
 type NodeRow struct {
@@ -358,8 +293,20 @@ func GetCIBResources() ([]ResourceRow, error) {
 		return nil, err
 	}
 
-	var rows []ResourceRow
-	for _, resource := range cib.Configuration.Primitives {
+	resourceCount := len(cib.Configuration.Primitives)
+	for _, clone := range cib.Configuration.Clones {
+		resourceCount += len(clone.Primitives)
+	}
+
+	resources := make([]Primitive, 0, resourceCount)
+	resources = append(resources, cib.Configuration.Primitives...)
+	// it's not the clone itself, but the pritimitive that clone
+	for _, clone := range cib.Configuration.Clones {
+		resources = append(resources, clone.Primitives...)
+	}
+
+	rows := make([]ResourceRow, 0, resourceCount)
+	for _, resource := range resources {
 		status := "Unknown"
 		role := "Unknown"
 		for _, meta_attribute := range resource.MetaAttributes.NVPairs {
@@ -386,17 +333,18 @@ func GetCIBResources() ([]ResourceRow, error) {
 		node := getResourceRunningNode(resource.ID, cib.Status.NodeStates)
 		events := getResourceEvents(resource.ID, cib.Status.NodeStates)
 		rows = append(rows, ResourceRow{
-			ID:             resource.ID,
-			Class:          resource.Class,
-			Provider:       resource.Provider,
-			Type:           resource.Type,
-			Node:           node,
-			Status:         status,
-			TargetRole:     role,
-			Constraints:    constraints,
-			MetaAttributes: resource.MetaAttributes.NVPairs,
-			Events:         events,
-			Utilizations:   resource.Utilizations,
+			ID:                 resource.ID,
+			Class:              resource.Class,
+			Provider:           resource.Provider,
+			Type:               resource.Type,
+			Node:               node,
+			Status:             status,
+			TargetRole:         role,
+			Constraints:        constraints,
+			InstanceAttributes: resource.InstanceAttributes.NVPairs,
+			MetaAttributes:     resource.MetaAttributes.NVPairs,
+			Events:             events,
+			Utilizations:       resource.Utilizations,
 		})
 	}
 
@@ -700,115 +648,23 @@ func GetOpDescriptions() []MetaParameter {
 	return result
 }
 
-/***************************************************
- * crm_resource --show-metadata ocf:pacemaker:Dummy
- ***************************************************/
-
-type CrmResourceMetadata struct {
-	Name       string          `xml:"name,attr"`
-	Version    string          `xml:"version,attr"`
-	Longdesc   string          `xml:"longdesc"`
-	Shortdesc  string          `xml:"shortdesc"`
-	Parameters []MetaParameter `xml:"parameters>parameter"` // maps to instance_attributes
-	Actions    []Action        `xml:"actions>action"`
-	/* RscDefaults (#meta_attributes) is not in 'crm_resource --show-metadata'
-	 * but it's copied from rscDefaults
-	 * and later enriched from 'cibadmin' */
-	RscDefaults []MetaParameter
-}
-
-type MetaParameter struct {
-	Name      string      `xml:"name,attr"`
-	Longdesc  string      `xml:"longdesc"`
-	Shortdesc string      `xml:"shortdesc"`
-	Content   ContentAttr `xml:"content"`
-}
-
-type ContentAttr struct {
-	Type    string `xml:"type,attr"`
-	Default string `xml:"default,attr"`
-	// Possible values are hardcoded
-	PossibleValues []string
-	// We take CibID and CibValue later from cib, if they are defined
-	Required string // string, so that ["true", "false", "" for undefined]
-	CibID    string // "" in case of operation attributes, the Action.CibID is used instead
-	CibValue string
-}
-
-/* TODO: Action struct is messy. It's used for both to parse cib.xml
- * and to store the default values of operations.
- * Maybe there should be two different structures
- * (however I might change my mind, so don't hastle with it (17.05.2025))*/
-type Action struct {
-	Depth          string `xml:"depth,attr,omitempty"`
-	Description    string `xml:"description,attr,omitempty"`
-	Enabled        string `xml:"enabled,attr,omitempty"`
-	Interval       string `xml:"interval,attr,omitempty"`
-	IntervalOrigin string `xml:"interval-origin,attr,omitempty"`
-	OnFail         string `xml:"on-fail,attr,omitempty"`
-	Name           string `xml:"name,attr"`
-	RecordPending  string `xml:"record-pending,attr,omitempty"`
-	Requires       string `xml:"requires,attr,omitempty"`
-	Role           string `xml:"role,attr,omitempty"`
-	StartDelay     string `xml:"start-delay,attr,omitempty"`
-	Timeout        string `xml:"timeout,attr,omitempty"`
-	// We take CibID later from cib, if they are defined
-	CibID string
-	// Default values
-	OpDefaults []MetaParameter
-	// Help info
-	Shortdesc string
-	Longdesc  string
-}
-
-func getResourceMetadata(resourceAgent string) (CrmResourceMetadata, error) {
-	//var cmd *exec.Cmd
-	cmd := exec.Command("crm_resource", "--show-metadata", resourceAgent)
-
-	out, err := cmd.Output()
-	if err != nil {
-		return CrmResourceMetadata{}, err
+func firstActionsByName(actions []Action) []Action {
+	if len(actions) < 2 {
+		return actions
 	}
 
-	var metadata CrmResourceMetadata // Directly unmarshal into this
-	if err := xml.Unmarshal(out, &metadata); err != nil {
-		return CrmResourceMetadata{}, err
+	seen := make(map[string]bool, len(actions))
+	uniqueActions := actions[:0]
+	for _, action := range actions {
+		if seen[action.Name] {
+			continue
+		}
+
+		seen[action.Name] = true
+		uniqueActions = append(uniqueActions, action)
 	}
 
-	// Additional handling for stonith agents
-	if strings.HasPrefix(resourceAgent, "stonith:") {
-
-		stonithPaths := []string{
-			"/usr/libexec/pacemaker/pacemaker-fenced",
-			"/usr/lib/pacemaker/pacemaker-fenced",
-		}
-
-		var stonithOut []byte
-		var stonithErr error
-
-		for _, p := range stonithPaths {
-			cmd = exec.Command(p, "metadata")
-			stonithOut, stonithErr = cmd.Output()
-			if stonithErr == nil {
-				break // Success → stop trying
-			}
-		}
-
-		if stonithErr != nil {
-			log.Printf("warning: failed to fetch stonith metadata: %v", stonithErr)
-			return metadata, stonithErr
-		}
-
-		var stonithMetadata CrmResourceMetadata
-		if err := xml.Unmarshal(stonithOut, &stonithMetadata); err != nil {
-			return CrmResourceMetadata{}, err
-		}
-
-		// merge stonith_metadata into metadata
-		metadata.Parameters = append(metadata.Parameters, stonithMetadata.Parameters...)
-	}
-
-	return metadata, nil
+	return uniqueActions
 }
 
 func enrichMetadataWithCibValues(metadata *CrmResourceMetadata, resourceID string) error {
@@ -1217,99 +1073,6 @@ func applyAttributes(cibAttributes []Nvpair, frontendAttributes []Nvpair, primit
 	}
 }
 
-func PrimitiveCreateHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: before creating the primitive try creating it in the shadow-cib
-	var frontendPrimitive Primitive
-
-	if err := json.NewDecoder(r.Body).Decode(&frontendPrimitive); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		log.Printf("[PrimitiveCreateHandler] JSON decode error: %v", err)
-		return
-	}
-
-	log.Printf("Creating resource %s with fields: %+v\n", frontendPrimitive.ID, frontendPrimitive)
-
-	raName := frontendPrimitive.Class + ":"
-	if frontendPrimitive.Provider != "" {
-		raName += frontendPrimitive.Provider + ":"
-	}
-	raName += frontendPrimitive.Type
-
-	args := []string{"configure", "primitive", frontendPrimitive.ID, raName}
-
-	// Parameters
-	for _, nvpair := range frontendPrimitive.InstanceAttributes.NVPairs {
-		args = append(args, fmt.Sprintf("%s=%s", nvpair.Name, nvpair.Value))
-	}
-
-	// Operations
-	for _, op := range frontendPrimitive.Operations {
-		args = append(args, "op", op.Name)
-		if op.Depth != "" {
-			args = append(args, "depth="+op.Depth)
-		}
-		if op.Description != "" {
-			args = append(args, "description="+op.Description)
-		}
-		if op.Enabled != "" {
-			args = append(args, "enabled="+op.Enabled)
-		}
-		if op.Interval != "" {
-			args = append(args, "interval="+op.Interval)
-		}
-		if op.IntervalOrigin != "" {
-			args = append(args, "interval-origin-="+op.IntervalOrigin)
-		}
-		if op.OnFail != "" {
-			args = append(args, "on-fail="+op.OnFail)
-		}
-		if op.RecordPending != "" {
-			args = append(args, "record-pending="+op.RecordPending)
-		}
-		if op.Requires != "" {
-			args = append(args, "requires="+op.Requires)
-		}
-		if op.Role != "" {
-			args = append(args, "role="+op.Role)
-		}
-		if op.StartDelay != "" {
-			args = append(args, "start-delay="+op.StartDelay)
-		}
-		if op.Timeout != "" {
-			args = append(args, "timeout="+op.Timeout)
-		}
-	}
-
-	// Meta Attributes
-	metaStarted := false
-	for _, nvpair := range frontendPrimitive.MetaAttributes.NVPairs {
-		// skip empty values like target-role="" (which happens in the test_copy_primitive)
-		if nvpair.Value == "" {
-			continue
-		}
-		if !metaStarted {
-			args = append(args, "meta")
-			metaStarted = true
-		}
-		args = append(args, fmt.Sprintf("%s=%s", nvpair.Name, nvpair.Value))
-	}
-
-	cmd := exec.Command("/usr/sbin/crm", args...)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	_, err := cmd.Output()
-	if err != nil {
-		http.Error(w, stderr.String(), http.StatusInternalServerError)
-		log.Printf("[PrimitiveCreateHandler] crm conf primitive %s ... : %v", frontendPrimitive.ID, err)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"status":  "ok",
-		"message": fmt.Sprintf("Created %s", frontendPrimitive.ID),
-	})
-}
-
 func PrimitiveUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	var frontendPrimitive Primitive
 
@@ -1470,117 +1233,9 @@ func PrimitiveRenameHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func PrimitiveDeleteHandler(w http.ResponseWriter, r *http.Request) {
-	var ResourceID string
-
-	if err := json.NewDecoder(r.Body).Decode(&ResourceID); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		log.Printf("[PrimitiveDeleteHandler] JSON decode error: %v", err)
-		return
-	}
-
-	cmd := exec.Command("/usr/sbin/crm", "--force", "configure", "delete", ResourceID)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	_, err := cmd.Output()
-	if err != nil {
-		http.Error(w, stderr.String(), http.StatusInternalServerError)
-		log.Printf("[PrimitiveDeleteHandler] crm --force configure delete %s error: %v", ResourceID, err)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"status":  "ok",
-		"message": fmt.Sprintf("Primitive %s deleted", ResourceID),
+// This function does the magic routing between Go and Ruby
+func LiveStatusHandler(w http.ResponseWriter, r *http.Request) {
+	renderTemplate(w, "live_status", map[string]any{
+		"Title": "Cluster Live Status",
 	})
-}
-
-func getRaAgents(raClass string, raProvider string) ([]string, error) {
-	var cmd *exec.Cmd
-	// when stonith or systemd classes --> raProvider is empty
-	cmd = exec.Command("/usr/sbin/crm", "ra", "list", raClass, raProvider)
-
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	out, err := cmd.Output()
-	if err != nil {
-		log.Printf("[getRaAgents] crm ra list: %v", err)
-		return nil, err
-	}
-
-	agents := strings.Fields(string(out))
-
-	return agents, nil
-}
-
-var cachedRaClasses map[string]map[string][]string
-var raClassesFetched bool
-
-func RaClassesHandler(w http.ResponseWriter, r *http.Request) {
-	if raClassesFetched {
-		/* crm ra classes is too slow,
-		 * return the cached result if exists.
-		 * TODO: implement the cache update */
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{"RaClasses": cachedRaClasses})
-		return
-	}
-
-	cmd := exec.Command("/usr/sbin/crm", "ra", "classes")
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	out, err := cmd.Output()
-	if err != nil {
-		http.Error(w, stderr.String(), http.StatusInternalServerError)
-		log.Printf("[RaClassesHandler] crm ra classes: %v", err)
-		return
-	}
-
-	// Split output into lines and remove empty ones
-	lines := strings.Split(string(out), "\n")
-	raClasses := make(map[string]map[string][]string)
-
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-
-		// Split by "/" and keep both parts
-		parts := strings.SplitN(line, "/", 2)
-		raClass := strings.TrimSpace(parts[0])
-		raClasses[raClass] = make(map[string][]string)
-
-		if len(parts) > 1 { // ocf
-			providersList := strings.Fields(parts[1])
-			for _, providerName := range providersList { // heartbeat, pacemaker, suse
-				agents, err := getRaAgents(raClass, providerName)
-				if err != nil {
-					http.Error(w, stderr.String(), http.StatusInternalServerError)
-					return
-				}
-
-				raClasses[raClass][providerName] = agents
-			}
-		} else { // stonith, systemd
-			agents, err := getRaAgents(raClass, "")
-			if err != nil {
-				http.Error(w, stderr.String(), http.StatusInternalServerError)
-				return
-			}
-			raClasses[raClass][""] = agents
-		}
-	}
-
-	cachedRaClasses = raClasses
-	raClassesFetched = true
-
-	data := map[string]any{"RaClasses": raClasses}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(data)
 }
