@@ -23,6 +23,7 @@ class Popup {
     // some modern ARIA features
     this.#divContainer.setAttribute("role", "dialog");
     this.#divContainer.setAttribute("aria-modal", "true");
+    this.#divContainer.setAttribute("id", "modal-popup");
     //this.#divContainer.setAttribute("aria-label", label);
   }
 
@@ -38,3 +39,5 @@ class Popup {
     this.#divContainer = null;
   }
 }
+
+window.Popup = Popup;

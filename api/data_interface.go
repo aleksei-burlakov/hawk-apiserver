@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/http"
 	"os/exec"
-	"strings"
 )
 
 type NameValue struct {
@@ -78,40 +77,6 @@ func parseIDandAgent(w http.ResponseWriter, r *http.Request) (string, string) {
 	return pair.ResourceID, pair.ResourceAgent
 }
 
-func fetchFullPrimitiveFromCib(ResourceID string, ResourceAgent string) (CrmResourceMetadata, error) {
-	// 1. Get the main content 'crm_resource --show-metadata'
-	metadata, err := getResourceMetadata(ResourceAgent)
-	if err != nil {
-		return CrmResourceMetadata{}, err
-	}
-
-	// 2. Copy the default meta_attributes, default operations and help info
-	metadata.RscDefaults = GetRscDefaults()
-	descriptions := GetOpDescriptions()
-	for i := range metadata.Actions {
-		metadata.Actions[i].OpDefaults = GetOpDefaults()
-		// It's a special case. In hawk we also handle this case in the code in oplist.js
-		if metadata.Actions[i].Name == "monitor" {
-			// T.B.A. (#TODO)
-		}
-		for _, desc := range descriptions {
-			// no idea why we need those 'op-' prefixes, but they exist in hawk
-			if metadata.Actions[i].Name == desc.Name || "op-"+metadata.Actions[i].Name == desc.Name {
-				metadata.Actions[i].Shortdesc = desc.Shortdesc
-				metadata.Actions[i].Longdesc = desc.Longdesc
-			}
-		}
-	}
-
-	// 4. Get current values of the attributes from cib.xml
-	err = enrichMetadataWithCibValues(&metadata, ResourceID)
-	if err != nil {
-		return CrmResourceMetadata{}, err
-	}
-
-	return metadata, nil
-}
-
 func fetchShortPrimitiveFromCib(ResourceID string) (Primitive, error) {
 	// 1. Query current XML
 	queryXPath := fmt.Sprintf("//primitive[@id='%s']", ResourceID)
@@ -146,24 +111,7 @@ func fetchPrimitiveFromFrontend(w http.ResponseWriter, r *http.Request) (Primiti
 	return frontendPrimitive, nil
 }
 
-// That's practically what we want from `crm status`
-// but I don't want to add another parser (even if there is crm status --as-xml)
-// let's just reuse `cibadmin -Ql`
-func FetchCrmStatus(w http.ResponseWriter, r *http.Request) {
-	CrmStatus, err := GetCrmStatus()
-	if err != nil {
-		http.Error(w, "Failed to get crm status: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(CrmStatus); err != nil {
-		log.Printf("[FetchCrmStatus] JSON encode error: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-	}
-}
-
-func FetchCibadminQl(w http.ResponseWriter, r *http.Request) {
+func FetchCibResources(w http.ResponseWriter, r *http.Request) {
 	CibStatus, err := GetCIBResources()
 	if err != nil {
 		http.Error(w, "Failed to get cibadmin status: "+err.Error(), http.StatusInternalServerError)
@@ -177,13 +125,43 @@ func FetchCibadminQl(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func isNodeClean(uname string, NodeStates []NodeState) bool {
+	for _, state := range NodeStates {
+		if state.Uname == uname {
+			return true
+		}
+	}
+	return false
+}
+
 func FetchClusterDetails(w http.ResponseWriter, r *http.Request) {
 	var frontendAgruments struct {
 		Host string `json:"host"`
 	}
+	type ClusterStatus string
+	const (
+		// ref: static/js/constants.js
+		ClusterStatusUnclean   ClusterStatus = "unclean"
+		ClusterStatusOnline    ClusterStatus = "online"
+		ClusterStatusNoQuorum  ClusterStatus = "noquorum"
+		ClusterStatusNoFencing ClusterStatus = "nofencing"
+		ClusterStatusOffline   ClusterStatus = "offline"
+	)
 	type ClusterDetails struct {
-		Summary    string      `json:"Summary"`
-		NameValues []NameValue `json:"NameValues"`
+		Summary        string        `json:"summary"`
+		Status         ClusterStatus `json:"status"`
+		Epoch          string        `json:"epoch"`
+		Host           string        `json:"host"`
+		DC             string        `json:"dc"`
+		Schema         string        `json:"schema"`
+		LastWritten    string        `json:"lastWritten"`
+		UpdateOrigin   string        `json:"updateOrigin"`
+		UpdateUser     string        `json:"updateUser"`
+		HaveQuorum     string        `json:"haveQuorum"`
+		Version        string        `json:"version"`
+		Stack          string        `json:"stack"`
+		FencingEnabled string        `json:"fencingEnabled"`
+		ClusterName    string        `json:"clusterName"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&frontendAgruments); err != nil {
@@ -192,39 +170,47 @@ func FetchClusterDetails(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cmd := exec.Command("cibadmin", "-Ql")
-	out, err := cmd.Output()
+	cib, pacemakerRC, err := GetCIB()
 	if err != nil {
-		log.Printf("[FetchClusterDetails] cibadmin error, pacemaker is offline: %v", err)
+		if pacemakerRC == 102 { // cluster offline
+			log.Printf("[FetchClusterDetails] cibadmin error, pacemaker is offline: %v", err)
 
-		result := ClusterDetails{"Error invoking /usr/sbin/cibadmin -Ql: " +
-			"Could not connect to the CIB: Transport endpoint is not connected cibadmin: " +
-			"Init failed, could not perform requested operations: " +
-			"Transport endpoint is not connected", []NameValue{{"Status", "offline"}}}
+			result := ClusterDetails{
+				Summary: "Error invoking /usr/sbin/cibadmin -Ql: " +
+					"Could not connect to the CIB: Transport endpoint is not connected cibadmin: " +
+					"Init failed, could not perform requested operations: " +
+					"Transport endpoint is not connected",
+				Status: ClusterStatusOffline}
 
-		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(result); err != nil {
-			log.Printf("[FetchClusterDetails] JSON encode error: %v", err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusServiceUnavailable) // pacemakerRC 102 --> http 503
+			if err := json.NewEncoder(w).Encode(result); err != nil {
+				log.Printf("[FetchClusterDetails] JSON encode error: %v", err)
+			}
+			return
 		}
-		return
-	}
 
-	var cib CIB
-	if err := xml.Unmarshal(out, &cib); err != nil {
-		log.Printf("[FetchClusterDetails] XML unmarshal error: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		log.Printf("[FetchClusterDetails] cibadmin error: %v", err)
+		http.Error(w, "Failed to get cluster details", http.StatusInternalServerError)
 		return
 	}
 
 	version := ""
 	stack := ""
+	fencingEnabled := ""
+	clusterName := ""
 	for _, nvpair := range cib.Configuration.CrmConfig.ClusterPropertySet.NVPairs {
-		if nvpair.Name == "dc-version" {
+		switch nvpair.Name {
+		case "dc-version":
 			version = nvpair.Value
-		}
-		if nvpair.Name == "cluster-infrastructure" {
+		case "cluster-infrastructure":
 			stack = nvpair.Value
+		case "stonith-enabled":
+			fencingEnabled = nvpair.Value
+		case "fencing-enabled":
+			fencingEnabled = nvpair.Value
+		case "cluster-name":
+			clusterName = nvpair.Value
 		}
 	}
 
@@ -235,11 +221,27 @@ func FetchClusterDetails(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	status := "ok"
-	summary := "OK"
+	status := ClusterStatusOnline
+	summary := "Online"
 	if cib.HaveQuorum == "0" {
-		status = "errors"
+		status = ClusterStatusNoQuorum
 		summary = "Partition without quorum! Fencing and resource management is disabled."
+	}
+
+	if fencingEnabled == "false" {
+		status = ClusterStatusNoFencing
+		summary = "FENCING is disabled. For normal cluster operation, FENCING is required."
+	}
+
+	// TODO?: there might be a combination of different statuses
+	// e.g. it can be both no-quorum and no-fencing,
+	// but implementing this is overengineering.
+	for _, node := range cib.Configuration.Nodes {
+		if isNodeClean(node.Uname, cib.Status.NodeStates) == false {
+			status = ClusterStatusUnclean
+			summary = "A node is UNCLEAN and needs to be fenced."
+			break
+		}
 	}
 
 	hostname := frontendAgruments.Host
@@ -249,187 +251,26 @@ func FetchClusterDetails(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := ClusterDetails{
-		Summary: summary,
-		NameValues: []NameValue{
-			{"Status", status},
-			{"Epoch", cib.AdminEpoch + ":" + cib.Epoch + ":" + cib.NumUpdates},
-			{"Host", hostname},
-			{"DC", dc},
-			{"Schema", cib.ValidateWith},
-			{"Last Written", cib.CibLastWritten},
-			{"Update Origin", cib.UpdateOrigin},
-			{"Update User", cib.UpdateUser},
-			{"Have Quorum", cib.HaveQuorum},
-			{"Version", version},
-			{"Stack", stack},
-		},
+		Summary:        summary,
+		Status:         status,
+		Epoch:          cib.AdminEpoch + ":" + cib.Epoch + ":" + cib.NumUpdates,
+		Host:           hostname,
+		DC:             dc,
+		Schema:         cib.ValidateWith,
+		LastWritten:    cib.CibLastWritten,
+		UpdateOrigin:   cib.UpdateOrigin,
+		UpdateUser:     cib.UpdateUser,
+		HaveQuorum:     cib.HaveQuorum,
+		Version:        version,
+		Stack:          stack,
+		FencingEnabled: fencingEnabled,
+		ClusterName:    clusterName,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(result); err != nil {
 		log.Printf("[FetchClusterDetails] JSON encode error: %v", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-	}
-}
-
-func FetchResourceClasses(w http.ResponseWriter, r *http.Request) {
-	cmd := exec.Command("crm", "ra", "classes")
-	out, err := cmd.Output()
-	if err != nil {
-		http.Error(w, "Failed to run 'crm ra classes'", http.StatusInternalServerError)
-		log.Printf("[FetchResourceClasses] Command error: %v", err)
-		return
-	}
-
-	lines := strings.Split(string(out), "\n")
-	var classes []string
-
-	for _, line := range lines {
-		fields := strings.Fields(line)
-		if len(fields) == 0 {
-			continue
-		}
-
-		class := fields[0]
-		// If second field is "/", it's the ocf line: `ocf / heartbeat ...`
-		if len(fields) >= 2 && fields[1] == "/" {
-			classes = append(classes, class)
-		} else if len(fields) == 1 {
-			// E.g., lines like "stonith" or "systemd"
-			classes = append(classes, class)
-		}
-	}
-
-	var content SelectContent
-	for _, class := range classes {
-		content.Options = append(content.Options, SelectOption{Name: class})
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(content); err != nil {
-		log.Printf("[FetchResourceClasses] JSON encode error: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-	}
-}
-
-func FetchResourceProviders(w http.ResponseWriter, r *http.Request) {
-	var request struct {
-		Class string `json:"Class"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "Invalid request: missing class", http.StatusBadRequest)
-		log.Printf("[FetchResourceProviders] JSON decode error: %v", err)
-		return
-	}
-
-	if request.Class == "" {
-		http.Error(w, "Missing required 'Class' field when quering provider", http.StatusBadRequest)
-		return
-	}
-
-	cmd := exec.Command("crm", "ra", "classes")
-	out, err := cmd.Output()
-	if err != nil {
-		http.Error(w, "Failed to run 'crm ra classes'", http.StatusInternalServerError)
-		log.Printf("[FetchResourceProviders] Command error: %v", err)
-		return
-	}
-
-	lines := strings.Split(string(out), "\n")
-	var providers []string
-
-	for _, line := range lines {
-		tokens := strings.Fields(line)
-		if len(tokens) >= 3 && tokens[1] == "/" && tokens[0] == request.Class {
-			providers = tokens[2:]
-			break
-		}
-	}
-
-	var content SelectContent
-	for _, p := range providers {
-		content.Options = append(content.Options, SelectOption{Name: p})
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(content); err != nil {
-		log.Printf("[FetchResourceProviders] JSON encode error: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-	}
-}
-
-func FetchResourceTypes(w http.ResponseWriter, r *http.Request) {
-	var input struct {
-		Class    string `json:"Class"`
-		Provider string `json:"Provider"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		log.Printf("[FetchResourceTypes] JSON decode error: %v", err)
-		return
-	}
-
-	if input.Class == "" {
-		http.Error(w, "Missing required 'Class' field when quering types", http.StatusBadRequest)
-		return
-	}
-
-	cmd := exec.Command("crm", "ra", "list", input.Class, input.Provider)
-	out, err := cmd.Output()
-	if err != nil {
-		log.Printf("[FetchResourceTypes] crm ra list error: %v", err)
-		http.Error(w, "Failed to list resource types: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Split by any whitespace and filter out empty entries
-	lines := strings.Fields(string(out))
-
-	var content SelectContent
-	for _, t := range lines {
-		content.Options = append(content.Options, SelectOption{Name: t})
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(content); err != nil {
-		log.Printf("Failed to encode resource types: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-	}
-}
-
-func FetchResourceParams(w http.ResponseWriter, r *http.Request) {
-	id, agent := parseIDandAgent(w, r)
-	metadata, err := fetchFullPrimitiveFromCib(id, agent)
-	if err != nil {
-		log.Printf("Failed to get cib values: %v", err)
-		http.Error(w, "Failed to get cib values: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	var content SelectContent
-	content.Shortdesc = metadata.Shortdesc
-	content.Longdesc = metadata.Longdesc
-	for _, param := range metadata.Parameters {
-		content.Options = append(content.Options,
-			SelectOption{
-				param.Name,
-				param.Content.Default,
-				param.Shortdesc,
-				param.Longdesc,
-				param.Content.Type,
-				param.Content.PossibleValues,
-				param.Content.Required,
-				param.Content.CibID,
-				param.Content.CibValue,
-			})
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(content); err != nil {
-		log.Printf("Failed to encode data: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
 	}
 }
 
@@ -456,41 +297,6 @@ func SubmitResourceParams(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func FetchResourceMetaAttributes(w http.ResponseWriter, r *http.Request) {
-	id, agent := parseIDandAgent(w, r)
-	metadata, err := fetchFullPrimitiveFromCib(id, agent)
-	if err != nil {
-		log.Printf("Failed to get cib values: %v", err)
-		http.Error(w, "Failed to get cib values: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	var content SelectContent
-	content.Shortdesc = metadata.Shortdesc
-	content.Longdesc = metadata.Longdesc
-	for _, param := range metadata.RscDefaults {
-		content.Options = append(content.Options,
-			SelectOption{
-				param.Name,
-				param.Content.Default,
-				param.Shortdesc,
-				param.Longdesc,
-				param.Content.Type,
-				param.Content.PossibleValues,
-				param.Content.Required,
-				param.Content.CibID,
-				param.Content.CibValue,
-			})
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(content); err != nil {
-		log.Printf("Failed to encode data: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-}
-
 func SubmitResourceMetaAttributes(w http.ResponseWriter, r *http.Request) {
 	frontendPrimitive, err := fetchPrimitiveFromFrontend(w, r)
 	if err != nil {
@@ -512,62 +318,6 @@ func SubmitResourceMetaAttributes(w http.ResponseWriter, r *http.Request) {
 		"status":  "ok",
 		"message": fmt.Sprintf("Updated %s", frontendPrimitive.ID),
 	})
-}
-
-func FetchResourceOperations(w http.ResponseWriter, r *http.Request) {
-	id, agent := parseIDandAgent(w, r)
-	metadata, err := fetchFullPrimitiveFromCib(id, agent)
-	if err != nil {
-		log.Printf("Failed to get cib values: %v", err)
-		http.Error(w, "Failed to get cib values: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	var content OperationContent
-	for _, action := range metadata.Actions {
-		var nameValues []NameValue
-		if action.CibID != "" {
-			for _, opdef := range action.OpDefaults {
-				if opdef.Content.CibValue != "" {
-					nameValues = append(nameValues, NameValue{opdef.Name, opdef.Content.CibValue})
-				}
-			}
-		}
-		newOption := OperationOption{
-			action.Name,
-			[]NameValue{
-				// action.Interval is what we parse
-				// from crm_resource --show-metadata
-				{"depth", action.Depth},
-				{"description", action.Description},
-				{"enabled", action.Enabled},
-				{"interval", action.Interval},
-				{"interval-origin", action.IntervalOrigin},
-				{"on-fail", action.OnFail},
-				{"record-pending", action.RecordPending},
-				{"requires", action.Requires},
-				{"role", action.Role},
-				{"start-delay", action.StartDelay},
-				{"timeout", action.Timeout},
-			},
-			action.Shortdesc, //param.Shortdesc,
-			action.Longdesc,  //param.Longdesc,
-			"",               //param.Content.Type,
-			[]string{""},     //param.Content.PossibleValues,
-			"",               //param.Content.Required,
-			action.CibID,     //param.Content.CibID,
-			nameValues,
-		}
-		content.Options = append(content.Options, newOption)
-	}
-
-	// Convert to JSON.
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(content); err != nil {
-		log.Printf("Failed to fetch select data: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
 }
 
 func SubmitResourceOperations(w http.ResponseWriter, r *http.Request) {

@@ -39,9 +39,6 @@ class ClusterDetailsPopup extends Popup {
 
   async #fetchData() {
     try {
-      // STOPPED HERE: TODO: call /monitor instead of /api/data-interface/fetch-cluster-details
-      // /monitor is long polling and it's better that the
-      // agressive /api/data-interface/fetch-cluster-details
       const res = await fetch("/api/data-interface/fetch-cluster-details", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -49,10 +46,23 @@ class ClusterDetailsPopup extends Popup {
       });
 
       if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
-      const { Summary, NameValues } = await res.json(); // Expected: array of { Summary { Name, Value }}
+      const { summary, status, epoch, host, dc, schema,
+        lastWritten, updateOrigin, updateUser, haveQuorum,
+        version, stack, fencingEnabled } = await res.json(); // Expected: array of { Summary { Name, Value }}
 
-      this.#populateTable(Summary, NameValues);
-      this.#updateCircleSummary(Summary);
+      this.#addRow("Status", status);
+      this.#addRow("Epoch", epoch);
+      this.#addRow("Host", host);
+      this.#addRow("DC", dc);
+      this.#addRow("Schema", schema);
+      this.#addRow("LastWritten", lastWritten);
+      this.#addRow("UpdateOrigin", updateOrigin);
+      this.#addRow("UpdateUser", updateUser);
+      this.#addRow("HaveQuorum", haveQuorum);
+      this.#addRow("Version", version);
+      this.#addRow("Stack", stack);
+      this.#addRow("FencingEnabled", fencingEnabled);
+      this.#updateCircleSummary(summary);
     } catch (err) {
       console.error("Failed to fetch cluster details:", err);
       const tr = document.createElement("tr");
@@ -61,27 +71,25 @@ class ClusterDetailsPopup extends Popup {
     }
   }
 
-  #populateTable(summary, rows) {
-    for (const { Name, Value } of rows) {
-      const tr = document.createElement("tr");
+  #addRow(name, value) {
+    const tr = document.createElement("tr");
 
-      const th = document.createElement("th");
-      th.className = "col-xs-4";
-      th.textContent = Name;
-      th.style.textAlign = "center";
+    const th = document.createElement("th");
+    th.className = "col-xs-4";
+    th.textContent = name;
+    th.style.textAlign = "center";
 
-      const td = document.createElement("td");
-      td.className = "col-xs-8";
-      td.style.textAlign = "center";
+    const td = document.createElement("td");
+    td.className = "col-xs-8";
+    td.style.textAlign = "center";
 
-      const span = document.createElement("span");
-      span.textContent = Value;
-      span.style.fontFamily = "monospace";
-      td.appendChild(span);
+    const span = document.createElement("span");
+    span.textContent = value;
+    span.style.fontFamily = "monospace";
+    td.appendChild(span);
 
-      tr.append(th, td);
-      this.#tbody.appendChild(tr);
-    }
+    tr.append(th, td);
+    this.#tbody.appendChild(tr);
   }
 
   #updateCircleSummary(summary) {
