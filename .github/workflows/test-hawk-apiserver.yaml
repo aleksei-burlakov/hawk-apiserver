@@ -1,0 +1,97 @@
+name: e2e_test for hawk on tumbleweed
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    branches:
+      - 'master'
+
+env:
+  IP_NODE1: 172.17.0.2
+  IP_NODE2: 172.17.0.3
+
+jobs:
+  build_examiner:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out hawk e2e tests
+        uses: actions/checkout@v4
+        with:
+          repository: ClusterLabs/hawk
+          path: hawk-upstream
+          sparse-checkout: e2e_test
+      - name: Build hawk-examiner image
+        run: |
+          docker build -t hawk-examiner -f hawk-upstream/e2e_test/Dockerfile hawk-upstream/e2e_test
+
+      - name: Export hawk-examiner image
+        run: |
+          docker save hawk-examiner:latest -o hawk-examiner.tar
+
+      - name: Upload hawk-examiner image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hawk-examiner-image
+          path: hawk-examiner.tar
+
+  test_tumbleweed:
+    runs-on: ubuntu-latest
+    needs: build_examiner
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Download hawk-examiner image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: hawk-examiner-image
+
+      - name: Load hawk-examiner image
+        run: |
+          docker load -i hawk-examiner.tar
+
+      - name: Build hawk-node Tumbleweed image
+        run: |
+          docker build -t hawk-node -f .github/docker/hawk-node.tumbleweed/Dockerfile .github/docker/hawk-node.tumbleweed/
+
+      - name: Start cluster nodes in containers
+        run: |
+          docker run -d --privileged -h node1 --name node1 --add-host node1:${IP_NODE1} --add-host node2:${IP_NODE2} hawk-node
+
+      - name: Copy hawk to the nodes
+        run: |
+          docker cp "$GITHUB_WORKSPACE" node1:/
+
+      - name: Trust copied hawk-apiserver repository
+        run: |
+          docker exec -i node1 git config --global --add safe.directory /hawk-apiserver
+
+      - name: Compile hawk-apiserver
+        run: |
+          docker exec -i node1 bash -c "cd hawk-apiserver && make"
+
+      - name: Install hawk-apiserver in the nodes
+        run: |
+          docker exec -i node1 bash -c "cd hawk-apiserver && make install"
+
+      - name: Initialize container on the node1
+        run: |
+          docker exec node1 crm cluster init -n cluster2 -y
+
+      - name: Check status of hawk
+        run: |
+          docker exec node1 systemctl status hawk hawk-backend
+
+      - name: Create a stonith-sbd device
+        run: |
+          docker exec node1 crm configure primitive fencing-sbd ocf:pacemaker:Dummy
+
+      - name: Run the functional test
+        run: |
+          docker run --rm hawk-examiner -H ${IP_NODE1} -s linux --xvfb
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker rm -f node1 || true
