@@ -1,4 +1,4 @@
-name: e2e_test for hawk on tumbleweed
+name: e2e_test for hawk against leap16.0 and tumbleweed
 on:
   push:
     branches:
@@ -34,6 +34,67 @@ jobs:
         with:
           name: hawk-examiner-image
           path: hawk-examiner.tar
+
+  test_leap160:
+    runs-on: ubuntu-latest
+    needs: build_examiner
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Download hawk-examiner image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: hawk-examiner-image
+
+      - name: Load hawk-examiner image
+        run: |
+          docker load -i hawk-examiner.tar
+
+      - name: Build hawk-node leap16.0 image
+        run: |
+          docker build -t hawk-node -f .github/docker/hawk-node.leap160/Dockerfile .github/docker/hawk-node.leap160/
+
+      - name: Start cluster nodes in containers
+        run: |
+          docker run -d --privileged -h node1 --name node1 --add-host node1:${IP_NODE1} --add-host node2:${IP_NODE2} hawk-node
+
+      - name: Copy hawk to the nodes
+        run: |
+          docker cp "$GITHUB_WORKSPACE" node1:/
+
+      - name: Trust copied hawk-apiserver repository
+        run: |
+          docker exec -i node1 git config --global --add safe.directory /hawk-apiserver
+
+      - name: Compile hawk-apiserver
+        run: |
+          docker exec -i node1 bash -c "cd hawk-apiserver && make"
+
+      - name: Install hawk-apiserver in the nodes
+        run: |
+          docker exec -i node1 bash -c "cd hawk-apiserver && make install"
+
+      - name: Initialize container on the node1
+        run: |
+          docker exec node1 crm cluster init -n cluster2 -y
+
+      - name: Check status of hawk
+        run: |
+          docker exec node1 systemctl status hawk hawk-backend
+
+      - name: Create a stonith-sbd device
+        run: |
+          docker exec node1 crm configure primitive fencing-sbd ocf:pacemaker:Dummy
+
+      - name: Run the functional test
+        run: |
+          docker run --rm hawk-examiner -H ${IP_NODE1} -s linux --xvfb
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker rm -f node1 || true
 
   test_tumbleweed:
     runs-on: ubuntu-latest
