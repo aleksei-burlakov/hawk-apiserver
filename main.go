@@ -114,6 +114,7 @@ func main() {
 	mux.HandleFunc("/cib/live/nodes", authMiddleware(api.NodesEditHandler))
 	mux.HandleFunc("/cib/live/nodes/", authMiddleware(api.NodesEditHandler))
 
+	// resource = primitive or clone
 	mux.HandleFunc("/api/cib/primitive/create", authMiddleware(api.PrimitiveCreateHandler))
 	mux.HandleFunc("/api/cib/primitive/update", authMiddleware(api.PrimitiveUpdateHandler)) // Can't find where it was used (let's not remove it though)
 	mux.HandleFunc("/api/cib/primitive/rename", authMiddleware(api.PrimitiveRenameHandler))

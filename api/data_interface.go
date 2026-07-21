@@ -71,7 +71,7 @@ func parseIDandAgent(w http.ResponseWriter, r *http.Request) (string, string) {
 
 	if err := json.NewDecoder(r.Body).Decode(&pair); err != nil {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
-		log.Printf("[fetchPrimitiveFromCib] JSON decode error: %v", err)
+		log.Printf("[parseIDandAgent] JSON decode error: %v", err)
 		return "", ""
 	}
 	return pair.ResourceID, pair.ResourceAgent
@@ -83,18 +83,38 @@ func fetchShortPrimitiveFromCib(ResourceID string) (Primitive, error) {
 	cmd := exec.Command("cibadmin", "-Q", "--xpath", queryXPath)
 	out, err := cmd.Output()
 	if err != nil {
-		log.Printf("[setPrimitive] cibadmin -Q error: %v", err)
+		log.Printf("[fetchShortPrimitiveFromCib] cibadmin -Q error: %v", err)
 		return Primitive{}, err
 	}
 
 	// 2. Unmarshal to struct
 	var cibPrimitive Primitive
 	if err := xml.Unmarshal(out, &cibPrimitive); err != nil {
-		log.Printf("[setPrimitive] XML unmarshal error: %v", err)
+		log.Printf("[fetchShortPrimitiveFromCib] XML unmarshal error: %v", err)
 		return Primitive{}, err
 	}
 
 	return cibPrimitive, nil
+}
+
+func fetchCloneFromCib(CloneID string) (Clone, error) {
+	// 1. Query current XML
+	queryXPath := fmt.Sprintf("//clone[@id='%s']", CloneID)
+	cmd := exec.Command("cibadmin", "-Q", "--xpath", queryXPath)
+	out, err := cmd.Output()
+	if err != nil {
+		log.Printf("[fetchCloneFromCib] cibadmin -Q error: %v", err)
+		return Clone{}, err
+	}
+
+	// 2. Unmarshal to struct
+	var cibClone Clone
+	if err := xml.Unmarshal(out, &cibClone); err != nil {
+		log.Printf("[fetchCloneFromCib] XML unmarshal error: %v", err)
+		return Clone{}, err
+	}
+
+	return cibClone, nil
 }
 
 func fetchPrimitiveFromFrontend(w http.ResponseWriter, r *http.Request) (Primitive, error) {
@@ -102,7 +122,7 @@ func fetchPrimitiveFromFrontend(w http.ResponseWriter, r *http.Request) (Primiti
 
 	if err := json.NewDecoder(r.Body).Decode(&frontendPrimitive); err != nil {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
-		log.Printf("[PrimitiveUpdateHandler] JSON decode error: %v", err)
+		log.Printf("[fetchPrimitiveFromFrontend] JSON decode error: %v", err)
 		return Primitive{}, err
 	}
 
@@ -120,7 +140,7 @@ func FetchCibResources(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(CibStatus); err != nil {
-		log.Printf("[FetchCrmStatus] JSON encode error: %v", err)
+		log.Printf("[FetchCibResources] JSON encode error: %v", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }
@@ -287,7 +307,7 @@ func SubmitResourceParams(w http.ResponseWriter, r *http.Request) {
 
 	// 2. Apply instance_attributes
 	applyAttributes(cibPrimitive.InstanceAttributes.NVPairs, frontendPrimitive.InstanceAttributes.NVPairs,
-		frontendPrimitive.ID, "instance_attributes", w)
+		frontendPrimitive.ID, "instance_attributes", "primitive", w)
 
 	// 3. Success
 	w.Header().Set("Content-Type", "application/json")
@@ -310,7 +330,7 @@ func SubmitResourceMetaAttributes(w http.ResponseWriter, r *http.Request) {
 
 	// 2. Apply instance_attributes
 	applyAttributes(cibPrimitive.MetaAttributes.NVPairs, frontendPrimitive.MetaAttributes.NVPairs,
-		frontendPrimitive.ID, "meta_attributes", w)
+		frontendPrimitive.ID, "meta_attributes", "primitive", w)
 
 	// 3. Success
 	w.Header().Set("Content-Type", "application/json")
@@ -321,25 +341,25 @@ func SubmitResourceMetaAttributes(w http.ResponseWriter, r *http.Request) {
 }
 
 func SubmitCloneMetaAttributes(w http.ResponseWriter, r *http.Request) {
-	frontendPrimitive, err := fetchPrimitiveFromFrontend(w, r)
+	frontendClone, err := fetchPrimitiveFromFrontend(w, r)
 	if err != nil {
 		return
 	}
 
-	cibPrimitive, err := fetchShortPrimitiveFromCib(frontendPrimitive.ID)
+	cibClone, err := fetchCloneFromCib(frontendClone.ID)
 	if err != nil {
 		return
 	}
 
 	// 2. Apply instance_attributes
-	applyAttributes(cibPrimitive.MetaAttributes.NVPairs, frontendPrimitive.MetaAttributes.NVPairs,
-		frontendPrimitive.ID, "meta_attributes", w)
+	applyAttributes(cibClone.MetaAttributes.NVPairs, frontendClone.MetaAttributes.NVPairs,
+		frontendClone.ID, "meta_attributes", "clone", w)
 
 	// 3. Success
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":  "ok",
-		"message": fmt.Sprintf("Updated %s", frontendPrimitive.ID),
+		"message": fmt.Sprintf("Updated %s", frontendClone.ID),
 	})
 }
 

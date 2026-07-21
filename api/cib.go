@@ -142,8 +142,9 @@ type Primitive struct {
 }
 
 type Clone struct {
-	ID         string      `xml:"id,attr" json:"id"`
-	Primitives []Primitive `xml:"primitive"`
+	ID             string        `xml:"id,attr" json:"id"`
+	Primitives     []Primitive   `xml:"primitive"`
+	MetaAttributes MetaAttribute `xml:"meta_attributes" json:"meta_attributes"`
 }
 
 type MetaAttribute struct {
@@ -505,6 +506,91 @@ var rscDefaults = []MetaParameter{
 	},
 }
 
+// copied from hawk -> clones.rb -> 'def mapping'
+var cloneDefaults = []MetaParameter{
+	{
+		Name:     "is-managed",
+		Longdesc: "Is the cluster allowed to start and stop the resource?",
+		Content: ContentAttr{
+			Type:    "boolean",
+			Default: "false",
+		},
+	},
+	{
+		Name:     "maintenance",
+		Longdesc: "Resources in maintenance mode are not monitored by the cluster.",
+		Content: ContentAttr{
+			Type:    "boolean",
+			Default: "false",
+		},
+	},
+	{
+		Name:     "priority",
+		Longdesc: "If not all resources can be active, the cluster will stop lower priority resources in order to keep higher priority ones active.",
+		Content: ContentAttr{
+			Type:    "integer",
+			Default: "0",
+		},
+	},
+	{
+		Name:     "target-role",
+		Longdesc: "What state should the cluster attempt to keep this resource in?",
+		Content: ContentAttr{
+			Type:           "enum",
+			Default:        "Stopped",
+			PossibleValues: []string{"Started", "Stopped", "Master"},
+		},
+	},
+	{
+		Name:     "clone-max",
+		Longdesc: "How many copies of the resource to start. Defaults to the number of nodes in the cluster.",
+		Content: ContentAttr{
+			Type:    "integer",
+			Default: "1", // TODO: should be the number of nodes in the cluster
+		},
+	},
+	{
+		Name:     "clone-node-max",
+		Longdesc: "How many copies of the resource can be started on a single node. Defaults to 1.",
+		Content: ContentAttr{
+			Type:    "integer",
+			Default: "1",
+		},
+	},
+	{
+		Name:     "notify",
+		Longdesc: "When stopping or starting a copy of the clone, tell all the other copies beforehand and when the action was successful.",
+		Content: ContentAttr{
+			Type:    "boolean",
+			Default: "false",
+		},
+	},
+	{
+		Name:     "globally-unique",
+		Longdesc: "Does each copy of the clone perform a different function?",
+		Content: ContentAttr{
+			Type:    "boolean",
+			Default: "true",
+		},
+	},
+	{
+		Name:     "ordered",
+		Longdesc: "Should the copies be started in series (instead of in parallel)?",
+		Content: ContentAttr{
+			Type:    "boolean",
+			Default: "false",
+		},
+	},
+	{
+		Name:     "interleave",
+		Longdesc: "Changes the behavior of ordering constraints (between clones/masters) so that instances can start/stop as soon as their peer instance has (rather than waiting for every instance of the other clone has).",
+		Content: ContentAttr{
+			Type:    "boolean",
+			Default: "false",
+		},
+	},
+}
+
 // copied from hawk -> tableless.rb --> OP_DEFAULTS
 // TODO: consider using hash-map Name -> Longdesc,Content
 var opDefaults = []MetaParameter{
@@ -634,6 +720,14 @@ func GetRscDefaults() []MetaParameter {
 	return result
 }
 
+func GetCloneDefaults() []MetaParameter {
+	// return a copy to prevent modification
+	result := make([]MetaParameter, len(cloneDefaults))
+	// TODO: cloneDefaults["clone-max"].Detault := number of nodes in cluster
+	copy(result, cloneDefaults)
+	return result
+}
+
 func GetOpDefaults() []MetaParameter {
 	// return a copy to prevent modification
 	result := make([]MetaParameter, len(opDefaults))
@@ -667,7 +761,38 @@ func firstActionsByName(actions []Action) []Action {
 	return uniqueActions
 }
 
-func enrichMetadataWithCibValues(metadata *CrmResourceMetadata, resourceID string) error {
+func enrichCloneMetaAttributesWithCibValues(metadata *CrmResourceMetadata, cloneID string) error {
+	// 1. Query current XML
+	queryXPath := fmt.Sprintf("/cib/configuration/resources/clone[@id='%s']/meta_attributes", cloneID)
+	cmd := exec.Command("cibadmin", "-Q", "--xpath", queryXPath)
+	out, err := cmd.Output()
+	if err != nil {
+		log.Printf("[enrichCloneMetaAttributesWithCibValues] cibadmin -Q error: %v", err)
+		return err
+	}
+
+	// 2. Unmarshal to struct
+	var metaAttributes MetaAttribute
+	if err := xml.Unmarshal(out, &metaAttributes); err != nil {
+		log.Printf("[enrichCloneMetaAttributesWithCibValues] XML unmarshal error: %v", err)
+		return err
+	}
+
+	// 3. Enrich with CibID and CibValue
+	for _, nv := range metaAttributes.NVPairs {
+		// search the parameter in MetaAttributes
+		for i := range metadata.RscDefaults {
+			if nv.Name == metadata.RscDefaults[i].Name {
+				metadata.RscDefaults[i].Content.CibID = nv.ID
+				metadata.RscDefaults[i].Content.CibValue = nv.Value
+			}
+		}
+	}
+
+	return nil
+}
+
+func enrichPrimitiveMetadataWithCibValues(metadata *CrmResourceMetadata, resourceID string) error {
 	// 1. Query current XML
 	queryXPath := fmt.Sprintf("/cib/configuration/resources//primitive[@id='%s']", resourceID)
 	cmd := exec.Command("cibadmin", "-Q", "--xpath", queryXPath)
@@ -1053,16 +1178,20 @@ func deleteOperation(opID string, resourceID string, removeParent bool) ([]byte,
 	return cmd.CombinedOutput()
 }
 
-func updateNvpair(nvpair Nvpair, section string, resourceID string) ([]byte, error) {
+func updateNvpair(nvpair Nvpair, section string, resourceID string, resourceElement string) ([]byte, error) {
+	if resourceElement != "primitive" && resourceElement != "clone" {
+		return nil, fmt.Errorf("unsupported resource element %q", resourceElement)
+	}
+
 	xmlBytes, err := xml.Marshal(nvpair)
 	if err != nil {
 		log.Printf("[updateCibNvpair] XML marshal error: %v", err)
 		return xmlBytes, err
 	}
 	xmlStr := string(xmlBytes)
-	xmlStr = fmt.Sprintf("<primitive id=\"%s\"><%s id=\"%s-%s\">%s</%s></primitive>", resourceID, section, resourceID, section, xmlStr, section)
+	xmlStr = fmt.Sprintf("<%s id=\"%s\"><%s id=\"%s-%s\">%s</%s></%s>", resourceElement, resourceID, section, resourceID, section, xmlStr, section, resourceElement)
 
-	queryXPath := fmt.Sprintf("//primitive[@id='%s']", resourceID)
+	queryXPath := fmt.Sprintf("//%s[@id='%s']", resourceElement, resourceID) // what about //*[@id='some-id']
 	cmd := exec.Command("cibadmin", "--modify", "--xpath", queryXPath, "--xml-text", xmlStr)
 	/* TODO!!! if it fails, check that the id is unique.
 	     * I have noticed a bug that id might start with a wrong primitive name like here
@@ -1103,7 +1232,7 @@ func deleteNvpair(cibAttributeID string, section string, resourceID string, remo
 	return cmd.CombinedOutput()
 }
 
-func applyAttributes(cibAttributes []Nvpair, frontendAttributes []Nvpair, primitiveID string, section string, w http.ResponseWriter) {
+func applyAttributes(cibAttributes []Nvpair, frontendAttributes []Nvpair, resourceID string, section string, resourceElement string, w http.ResponseWriter) {
 	// cibAttributes - what exists
 	// frontendPrimitives - what should be
 
@@ -1119,7 +1248,7 @@ func applyAttributes(cibAttributes []Nvpair, frontendAttributes []Nvpair, primit
 		}
 		if !nvpairExistsInFrontend {
 			// if there is only 1 nvpair left --> remove it together with <instance_attributes ...>
-			_, err := deleteNvpair(cibAttributes[i].ID, section, primitiveID, attributesExist <= 1)
+			_, err := deleteNvpair(cibAttributes[i].ID, section, resourceID, attributesExist <= 1)
 			attributesExist--
 			if err != nil {
 				http.Error(w, "Failed to encode updated XML", http.StatusInternalServerError)
@@ -1152,9 +1281,9 @@ func applyAttributes(cibAttributes []Nvpair, frontendAttributes []Nvpair, primit
 			continue
 		}
 		if !nvpairExistsInCib { // if the nvpair doesn't exist in cib --> create it
-			newNvpair = Nvpair{ID: primitiveID + "-" + section + "-" + frontendNvpair.Name, Name: frontendNvpair.Name, Value: frontendNvpair.Value}
+			newNvpair = Nvpair{ID: resourceID + "-" + section + "-" + frontendNvpair.Name, Name: frontendNvpair.Name, Value: frontendNvpair.Value}
 		}
-		_, err := updateNvpair(newNvpair, section, primitiveID)
+		_, err := updateNvpair(newNvpair, section, resourceID, resourceElement)
 		if err != nil {
 			http.Error(w, "Failed to execute cibadmin --update", http.StatusInternalServerError)
 			log.Printf("[setPrimitive] cibadmin --update error: %v", err)
@@ -1194,11 +1323,11 @@ func PrimitiveUpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	// 3. Apply instance_attributes
 	applyAttributes(cibPrimitive.InstanceAttributes.NVPairs, frontendPrimitive.InstanceAttributes.NVPairs,
-		frontendPrimitive.ID, "instance_attributes", w)
+		frontendPrimitive.ID, "instance_attributes", "primitive", w)
 
 	// 4. Apply meta_attributes
 	applyAttributes(cibPrimitive.MetaAttributes.NVPairs, frontendPrimitive.MetaAttributes.NVPairs,
-		frontendPrimitive.ID, "meta_attributes", w)
+		frontendPrimitive.ID, "meta_attributes", "primitive", w)
 
 	// 5. Apply operations. (TODO: it repeats the SubmitResourceOperations)
 	for _, frontendOp := range frontendPrimitive.Operations {

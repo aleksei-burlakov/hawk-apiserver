@@ -10,7 +10,7 @@
 <script src="/static/js/classes/XSelect.js"></script>
 <script src="/static/js/classes/Input.js"></script>
 <script src="/static/js/classes/XKvGroupBase.js"></script>
-<script src="/static/js/classes/XCloneKvGroup.js"></script>
+<script src="/static/js/classes/XKvGroup.js"></script>
 <script src="/static/js/clone_edit.js" defer></script>
 
 <div class="edit-layout">
@@ -59,22 +59,21 @@
     <div class="accordion">
       <details id="details-meta_attributes" open>
         <summary><strong>Meta Attributes</strong></summary>
-        <x-clone-kvgroup
+        <x-kvgroup
           id="kvgroup-meta_attributes"
           name="meta_attributes"
-          clone-id="{{ .CloneID }}"
-          child-resource="{{ .ResourceAgent }}"
+          resource-id="{{ .CloneID }}"
           options-api="/api/cib/clone/meta-attributes/fetch"
           submit-api="/api/cib/clone/meta-attributes/submit">
         </x-kvgroup>
       </details>
 
       <div style="margin-top: 20px; text-align: center;">
-        <button id="apply-create-button" name="submit" class="btn btn-success" onclick="clickApplyCreateButton(this)">Apply</button>
+        <button id="apply-create-button" name="submit" class="btn btn-success" onclick="clickApplyButton()">Apply</button>
         <!-- I would rather expect `onclick="history.back()"` however old hawk forwards to /cib/live/config/edit -->
         <a class="btn btn-white" href="/cib/live/config/edit">Back</a>
       </div>
-      
+
     </div>
   </div>
   <div class="edit-right">

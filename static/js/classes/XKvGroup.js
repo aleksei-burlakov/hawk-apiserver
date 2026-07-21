@@ -22,7 +22,9 @@ class XKvGroup extends window.XKvGroupBase {
     this.#inited = true;
 
     this.#name = this.getAttribute("name");
+    // resourceID is either PrimitiveID or CloneID
     this.#resourceID = this.getAttribute("resource-id");
+    // if clone => resourceAgent is ignored in the backend, just leave it empty
     this.#resourceAgent = this.getAttribute("resource-agent");
     this.#optionsApi = this.getAttribute("options-api");
     this.#submitApi = this.getAttribute("submit-api");
@@ -79,7 +81,8 @@ class XKvGroup extends window.XKvGroupBase {
       .then(content => {
         const contentOptions = content.Options || [];
         contentOptions.forEach(o => {
-          const optionObj = new SelectOption(o.Name, o.Type, o.DefaultValue, o.Shortdesc, o.Longdesc, o.PossibleValues);
+          const optionObj = new SelectOption(o.Name, o.Type, o.DefaultValue,
+              o.Shortdesc, o.Longdesc, o.PossibleValues);
           this.#selectObj.appendOption(optionObj);
           if (o.CibID) {
             const frontendValue = "";
@@ -258,7 +261,7 @@ class XKvGroup extends window.XKvGroupBase {
       return { id: opID, name: attrName, value };
     });
 
-    const primitive = {
+    const resource = {
       id: this.#resourceID,
       [this.#name]: {
         id: `${this.#resourceID}-${this.#name}`,
@@ -269,7 +272,7 @@ class XKvGroup extends window.XKvGroupBase {
     return fetch(this.#submitApi, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(primitive)
+      body: JSON.stringify(resource)
     })
       .then(async res => {
         if (!res.ok) throw new Error(await res.text() || "Unknown error");

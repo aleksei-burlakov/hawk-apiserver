@@ -147,7 +147,22 @@ func fetchFullPrimitiveFromCib(ResourceID string, ResourceAgent string) (CrmReso
 	}
 
 	// 4. Get current values of the attributes from cib.xml
-	err = enrichMetadataWithCibValues(&metadata, ResourceID)
+	err = enrichPrimitiveMetadataWithCibValues(&metadata, ResourceID)
+	if err != nil {
+		return CrmResourceMetadata{}, err
+	}
+
+	return metadata, nil
+}
+
+func fetchFullCloneFromCib(CloneID string) (CrmResourceMetadata, error) {
+	metadata := CrmResourceMetadata{}
+
+	// 1. Copy the default meta_attributes, default operations and help info
+	metadata.RscDefaults = GetCloneDefaults()
+
+	// 2. Get current values of the attributes from cib.xml
+	err := enrichCloneMetaAttributesWithCibValues(&metadata, CloneID)
 	if err != nil {
 		return CrmResourceMetadata{}, err
 	}
@@ -191,8 +206,9 @@ func FetchResourceMetaAttributes(w http.ResponseWriter, r *http.Request) {
 }
 
 func FetchCloneMetaAttributes(w http.ResponseWriter, r *http.Request) {
-	id, agent := parseIDandAgent(w, r)
-	metadata, err := fetchFullPrimitiveFromCib(id, agent)
+	cloneID, _ := parseIDandAgent(w, r)
+	// STOPPED HERE: 1. do we need the child resource, or cloneID is enough?
+	metadata, err := fetchFullCloneFromCib(cloneID)
 	if err != nil {
 		log.Printf("Failed to get cib values: %v", err)
 		http.Error(w, "Failed to get cib values: "+err.Error(), http.StatusInternalServerError)
