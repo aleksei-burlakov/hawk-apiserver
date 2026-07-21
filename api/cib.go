@@ -841,6 +841,96 @@ func ResourceEditHandler(w http.ResponseWriter, r *http.Request) {
 	http.NotFound(w, r)
 }
 
+func CloneEditHandler(w http.ResponseWriter, r *http.Request) {
+	const prefix = "/cib/live/clones"
+
+	// Normalize (collapse //, removes trailing /)
+	cleanPath := path.Clean(r.URL.EscapedPath())
+
+	// must be either exactly the prefix or start with prefix + "/"
+	if cleanPath != prefix && !strings.HasPrefix(cleanPath, prefix+"/") {
+		http.NotFound(w, r)
+		return
+	}
+
+	// pre-parsing
+	cleanPath = strings.TrimSuffix(cleanPath, "/")    // drop ending /
+	cleanPath = strings.TrimPrefix(cleanPath, prefix) // drop prefix
+	cleanPath = strings.TrimPrefix(cleanPath, "/")    // drop the leading slash
+
+	// "{id}/edit" --> handle here
+	if strings.HasSuffix(cleanPath, "/edit") {
+		cloneID := strings.TrimSuffix(cleanPath, "/edit")
+
+		// make sure its {id}, not {id1}/{id2}/...
+		if cloneID == "" || strings.Contains(cloneID, "/") {
+			http.NotFound(w, r)
+			return
+		}
+
+		childResource := "stateful1"
+		/*
+			nodes, err := GetCIBNodes()
+			if err != nil {
+				http.Error(w, "[NodesEditHandler] Failed to get nodes in 'cibadmin -Ql': "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			var thisNode Node
+			thisNodeFound := false
+
+			for _, node := range nodes {
+				if node.ID == cloneID {
+					thisNode = node
+					thisNodeFound = true
+				}
+			}
+
+			if thisNodeFound == false {
+				http.Error(w, "[NodesEditHandler] Failed to find nodes with ID "+cloneID, http.StatusInternalServerError)
+				return
+			}
+
+			// If we do Configuration -> Add Resource -> Primitive -> Create
+			// It would redirect to the cib/live/primitives/{primitive-id}/edit?flash={created|updated}
+			flash := r.URL.Query().Get("flash")
+			var alertType, alertMsg string
+
+			switch flash {
+			case "created":
+				alertType = "success"
+				alertMsg = "Node created successfully"
+			case "updated":
+				alertType = "success"
+				alertMsg = "Node updated successfully"
+			case "renamed":
+				alertType = "success"
+				alertMsg = "Node renamed successfully"
+			case "error":
+				alertType = "danger"
+				alertMsg = r.URL.Query().Get("msg")
+				if alertMsg == "" {
+					alertMsg = "There was an error processing the primitive."
+				}
+			}
+		*/
+
+		renderTemplate(w, "clone_edit", map[string]any{
+			"Title":         "Edit Node",
+			"CloneID":       cloneID,
+			"ChildResource": childResource,
+		})
+		return
+	}
+
+	// else --> Ruby
+	if Routehandler != nil {
+		Routehandler.ServeHTTP(w, r)
+		return
+	}
+	http.NotFound(w, r)
+}
+
 func NodesEditHandler(w http.ResponseWriter, r *http.Request) {
 	const prefix = "/cib/live/nodes"
 

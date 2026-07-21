@@ -1,0 +1,135 @@
+
+{{ define "content" }}
+<link rel="stylesheet" href="/static/css/primitive_edit.css">
+<script src="/static/js/XCSS.js"></script>
+<script src="/static/js/classes/RAInfoPopup.js"></script>
+<script src="/static/js/classes/SelectOption.js"></script>
+<script src="/static/js/classes/OperationPopup.js"></script>
+<script src="/static/js/classes/DeletePopup.js"></script>
+<script src="/static/js/classes/RenamePopup.js"></script>
+<script src="/static/js/classes/XAlert.js"></script>
+<script src="/static/js/classes/Select.js"></script>
+<script src="/static/js/classes/XSelect.js"></script>
+<script src="/static/js/classes/Input.js"></script>
+<script src="/static/js/classes/OperationInput.js"></script>
+<script src="/static/js/classes/XKvGroupBase.js"></script>
+<script src="/static/js/classes/XKvGroup.js"></script>
+<script src="/static/js/classes/XOperationsKvGroup.js"></script>
+<script src="/static/js/classes/XInputsKvGroup.js"></script>
+<script src="/static/js/classes/Primitive.js"></script>
+<script src="/static/js/classes/Span.js"></script>
+<script src="/static/js/clone_edit.js" defer></script>
+
+<div class="edit-layout">
+  <div class="edit-left">
+
+    {{ if .AlertMessage }}
+      <x-alert
+        type="{{ .AlertType }}"
+        message="{{ .AlertMessage }}"
+        visible="true">
+      </x-alert>
+    {{ end }}
+
+
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h2><i class="fas fa-copy"></i> Edit Clone: {{ .CloneID }}</h2>
+      <div id="copy-rename-delete-container">
+        <button class="btn btn-white" name="copy" onclick=""><i class="fas fa-plus"></i> Create</button>
+        <button class="btn btn-white" name="rename" onclick=""><i class="fas fa-font"></i> Rename</button>
+        <button class="btn btn-white text-danger" name="delete" onclick=""><i class="fas fa-trash"></i> Delete</button>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="kvsection-row kvsection-row-thin">
+        <label>Clone ID</label>
+        <input id="input-clone-id" type="text" value="{{ .CloneID }}" class="form-control" name="primitive[id]" readonly style="width:60%;">
+      </div>
+
+      <div class="kvsection-row kvsection-row-thin">
+        <label>Child Resource</label>
+        <input id="input-child-resource" type="text" value="{{ .ChildResource }}" class="form-control" name="primitive[id]" readonly style="width:60%;">
+      </div>
+
+      <!--<x-select
+        id="class-xselect"
+        label="Class"
+        description="Standard which the resource agent conforms to."
+        value="{{ .Class }}"
+        options-api="/api/data-interface/fetch-resource-classes"
+        onchange="changeClass()"
+        disabled="true">
+      </x-select>-->
+
+      <button class="btn btn-white btn-info" onclick='new RAInfoPopup("{{ .CloneID }}", "{{ .ResourceAgent }}")'>
+        <i class="fas fa-info"></i></button>
+
+    </div>
+
+    <div class="accordion">
+      <details id="details-instance_attributes" open>
+        <summary><strong>Parameters</strong></summary>
+        <x-kvgroup
+          id="kvgroup-instance_attributes"
+          name="instance_attributes"
+          resource-id="{{ .CloneID }}"
+          resource-agent="{{ .ResourceAgent }}"
+          options-api="/api/data-interface/fetch-resource-params"
+          submit-api="/api/data-interface/submit-resource-params">
+        </x-kvgroup>
+      </details>
+
+      <details id="details-operations" open>
+        <summary><strong>Operations</strong></summary>
+        <x-operations-kvgroup
+          id="kvgroup-operations"
+          resource-id="{{ .CloneID }}"
+          resource-agent="{{ .ResourceAgent }}"
+          options-api="/api/data-interface/fetch-resource-operations"
+          submit-api="/api/data-interface/submit-resource-operations">
+        </x-operations-kvgroup>
+      </details>
+
+      <details id="details-meta_attributes" open>
+        <summary><strong>Meta Attributes</strong></summary>
+        <x-kvgroup
+          id="kvgroup-meta_attributes"
+          name="meta_attributes"
+          resource-id="{{ .CloneID }}"
+          resource-agent="{{ .ResourceAgent }}"
+          options-api="/api/data-interface/fetch-resource-meta-attributes"
+          submit-api="/api/data-interface/submit-resource-meta-attributes">
+        </x-kvgroup>
+      </details>
+
+      <details open>
+        <summary><strong>Utilization</strong></summary>
+        <x-inputs-kvgroup
+          id="kvgroup-resource_utilizations"
+          cib-object="{{ .CloneID }}"
+          options-api="/api/data-interface/fetch-resource-utilizations"
+          submit-api="/api/data-interface/submit-resource-utilizations">
+        </x-inputs-kvgroup>
+      </details>
+
+      <div style="margin-top: 20px; text-align: center;">
+        <button id="apply-create-button" name="submit" class="btn btn-success" onclick="clickApplyCreateButton(this)">Apply</button>
+        <!-- I would rather expect `onclick="history.back()"` however old hawk forwards to /cib/live/config/edit -->
+        <a class="btn btn-white" href="/cib/live/config/edit">Back</a>
+      </div>
+      
+    </div>
+  </div>
+  <div class="edit-right">
+    <h4>Primitive</h3>
+    <p>Primitive resources are the most basic type of resource.</p>
+    <p>To create a primitive, define an ID and specify some parameters like class, provider, and type.</p>
+    <p>An example of a primitive resource is <code>ocf:heartbeat:IPaddr</code>, which can be used to configure a floating IP address for your cluster.</p>
+    <br>
+    <h4 id="agent-shortdesc"></h3><div id="agent-longdesc"></div>
+    <br>
+    <h4 id="field-shortdesc"></h3><p id="field-longdesc"></p>
+  </div>
+</div>
+{{ end }}
