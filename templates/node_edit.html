@@ -54,8 +54,8 @@
             <x-inputs-kvgroup
               id="kvgroup-node_attributes"
               cib-object="{{ .NodeName }}"
-              options-api="/api/data-interface/fetch-node-attributes"
-              submit-api="/api/data-interface/submit-node-attributes">
+              options-api="/api/cib/node/attributes/fetch"
+              submit-api="/api/cib/node/attributes/submit">
             </x-inputs-kvgroup>
           </details>
 
@@ -64,8 +64,8 @@
             <x-inputs-kvgroup
               id="kvgroup-node_utilizations"
               cib-object="{{ .NodeName }}"
-              options-api="/api/data-interface/fetch-node-utilizations"
-              submit-api="/api/data-interface/submit-node-utilizations">
+              options-api="/api/cib/node/utilizations/fetch"
+              submit-api="/api/cib/node/utilizations/submit">
             </x-inputs-kvgroup>
           </details>
 

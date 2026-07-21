@@ -1,11 +1,11 @@
-class XKvGroup extends window.XKvGroupBase {
+class XCloneKvGroup extends window.XKvGroupBase {
   #container;
   #name;
   #inputs = [];
   #selectRow; // kvsection-row for the select
   #selectObj;
-  #resourceID;
-  #resourceAgent;
+  #cloneID;
+  #childResource;
   #optionsApi;
   #submitApi;
   #readyResolve;
@@ -22,8 +22,8 @@ class XKvGroup extends window.XKvGroupBase {
     this.#inited = true;
 
     this.#name = this.getAttribute("name");
-    this.#resourceID = this.getAttribute("resource-id");
-    this.#resourceAgent = this.getAttribute("resource-agent");
+    this.#cloneID = this.getAttribute("clone-id");
+    this.#childResource = this.getAttribute("child-resource");
     this.#optionsApi = this.getAttribute("options-api");
     this.#submitApi = this.getAttribute("submit-api");
 
@@ -70,7 +70,7 @@ class XKvGroup extends window.XKvGroupBase {
     return fetch(this.#optionsApi, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ResourceID: this.#resourceID, ResourceAgent: this.#resourceAgent})
+      body: JSON.stringify({ ResourceID: this.#cloneID, ResourceAgent: this.#childResource})
     })
       .then(async res => {
         if (!res.ok) throw new Error(await res.text() || "Unknown error");
@@ -259,9 +259,9 @@ class XKvGroup extends window.XKvGroupBase {
     });
 
     const primitive = {
-      id: this.#resourceID,
+      id: this.#cloneID,
       [this.#name]: {
-        id: `${this.#resourceID}-${this.#name}`,
+        id: `${this.#cloneID}-${this.#name}`,
         nvpair: attributes
       }
     };
@@ -282,4 +282,4 @@ class XKvGroup extends window.XKvGroupBase {
   }
 }
 
-customElements.define("x-kvgroup", XKvGroup);
+customElements.define("x-clone-kvgroup", XCloneKvGroup);

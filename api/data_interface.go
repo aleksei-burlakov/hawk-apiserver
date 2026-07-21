@@ -320,6 +320,29 @@ func SubmitResourceMetaAttributes(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func SubmitCloneMetaAttributes(w http.ResponseWriter, r *http.Request) {
+	frontendPrimitive, err := fetchPrimitiveFromFrontend(w, r)
+	if err != nil {
+		return
+	}
+
+	cibPrimitive, err := fetchShortPrimitiveFromCib(frontendPrimitive.ID)
+	if err != nil {
+		return
+	}
+
+	// 2. Apply instance_attributes
+	applyAttributes(cibPrimitive.MetaAttributes.NVPairs, frontendPrimitive.MetaAttributes.NVPairs,
+		frontendPrimitive.ID, "meta_attributes", w)
+
+	// 3. Success
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "ok",
+		"message": fmt.Sprintf("Updated %s", frontendPrimitive.ID),
+	})
+}
+
 func SubmitResourceOperations(w http.ResponseWriter, r *http.Request) {
 	frontendPrimitive, err := fetchPrimitiveFromFrontend(w, r)
 	if err != nil {

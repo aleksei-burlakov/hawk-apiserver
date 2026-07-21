@@ -1,10 +1,10 @@
 class DeletePopup extends Popup {
   #resourceID;
 
-  constructor() {
+  constructor(resourceID) {
     super();
 
-    this.#resourceID = window.resourceData.ResourceID;
+    this.#resourceID = resourceID;
 
     // Header
     const header = document.createElement("div");
@@ -88,5 +88,3 @@ class DeletePopup extends Popup {
     super.close();
   }
 }
-
-window.DeletePopup = DeletePopup;

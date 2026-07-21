@@ -3,10 +3,10 @@ class RenamePopup extends Popup {
   #newID;
   #okBtn;
 
-  constructor() {
+  constructor(resourceID) {
     super();
 
-    this.#resourceID = window.resourceData.ResourceID;
+    this.#resourceID = resourceID;
 
     // Header (no |x|-close button)
     const header = document.createElement("div");
@@ -105,5 +105,3 @@ class RenamePopup extends Popup {
     super.close();
   }
 }
-
-window.RenamePopup = RenamePopup;

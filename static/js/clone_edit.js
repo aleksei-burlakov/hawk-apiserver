@@ -20,7 +20,7 @@ function setAgentInfo()
   const agentLongdesc = document.getElementById('agent-longdesc');
 
   // copy-paste from #buildParametersTable()
-  fetch('/api/data-interface/fetch-resource-params', {
+  fetch('/api/cib/resource/params/fetch', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ResourceID, ResourceAgent})

@@ -2,22 +2,15 @@
 {{ define "content" }}
 <link rel="stylesheet" href="/static/css/primitive_edit.css">
 <script src="/static/js/XCSS.js"></script>
-<script src="/static/js/classes/RAInfoPopup.js"></script>
 <script src="/static/js/classes/SelectOption.js"></script>
-<script src="/static/js/classes/OperationPopup.js"></script>
 <script src="/static/js/classes/DeletePopup.js"></script>
 <script src="/static/js/classes/RenamePopup.js"></script>
 <script src="/static/js/classes/XAlert.js"></script>
 <script src="/static/js/classes/Select.js"></script>
 <script src="/static/js/classes/XSelect.js"></script>
 <script src="/static/js/classes/Input.js"></script>
-<script src="/static/js/classes/OperationInput.js"></script>
 <script src="/static/js/classes/XKvGroupBase.js"></script>
-<script src="/static/js/classes/XKvGroup.js"></script>
-<script src="/static/js/classes/XOperationsKvGroup.js"></script>
-<script src="/static/js/classes/XInputsKvGroup.js"></script>
-<script src="/static/js/classes/Primitive.js"></script>
-<script src="/static/js/classes/Span.js"></script>
+<script src="/static/js/classes/XCloneKvGroup.js"></script>
 <script src="/static/js/clone_edit.js" defer></script>
 
 <div class="edit-layout">
@@ -44,12 +37,12 @@
     <div class="form-section">
       <div class="kvsection-row kvsection-row-thin">
         <label>Clone ID</label>
-        <input id="input-clone-id" type="text" value="{{ .CloneID }}" class="form-control" name="primitive[id]" readonly style="width:60%;">
+        <input id="input-clone-id" type="text" value="{{ .CloneID }}" class="form-control" readonly style="width:60%;">
       </div>
 
       <div class="kvsection-row kvsection-row-thin">
         <label>Child Resource</label>
-        <input id="input-child-resource" type="text" value="{{ .ChildResource }}" class="form-control" name="primitive[id]" readonly style="width:60%;">
+        <input id="input-child-resource" type="text" value="{{ .ChildResource }}" class="form-control" readonly style="width:60%;">
       </div>
 
       <!--<x-select
@@ -57,60 +50,23 @@
         label="Class"
         description="Standard which the resource agent conforms to."
         value="{{ .Class }}"
-        options-api="/api/data-interface/fetch-resource-classes"
+        options-api="/api/cib/resource/classes/fetch"
         onchange="changeClass()"
         disabled="true">
       </x-select>-->
-
-      <button class="btn btn-white btn-info" onclick='new RAInfoPopup("{{ .CloneID }}", "{{ .ResourceAgent }}")'>
-        <i class="fas fa-info"></i></button>
-
     </div>
 
     <div class="accordion">
-      <details id="details-instance_attributes" open>
-        <summary><strong>Parameters</strong></summary>
-        <x-kvgroup
-          id="kvgroup-instance_attributes"
-          name="instance_attributes"
-          resource-id="{{ .CloneID }}"
-          resource-agent="{{ .ResourceAgent }}"
-          options-api="/api/data-interface/fetch-resource-params"
-          submit-api="/api/data-interface/submit-resource-params">
-        </x-kvgroup>
-      </details>
-
-      <details id="details-operations" open>
-        <summary><strong>Operations</strong></summary>
-        <x-operations-kvgroup
-          id="kvgroup-operations"
-          resource-id="{{ .CloneID }}"
-          resource-agent="{{ .ResourceAgent }}"
-          options-api="/api/data-interface/fetch-resource-operations"
-          submit-api="/api/data-interface/submit-resource-operations">
-        </x-operations-kvgroup>
-      </details>
-
       <details id="details-meta_attributes" open>
         <summary><strong>Meta Attributes</strong></summary>
-        <x-kvgroup
+        <x-clone-kvgroup
           id="kvgroup-meta_attributes"
           name="meta_attributes"
-          resource-id="{{ .CloneID }}"
-          resource-agent="{{ .ResourceAgent }}"
-          options-api="/api/data-interface/fetch-resource-meta-attributes"
-          submit-api="/api/data-interface/submit-resource-meta-attributes">
+          clone-id="{{ .CloneID }}"
+          child-resource="{{ .ResourceAgent }}"
+          options-api="/api/cib/clone/meta-attributes/fetch"
+          submit-api="/api/cib/clone/meta-attributes/submit">
         </x-kvgroup>
-      </details>
-
-      <details open>
-        <summary><strong>Utilization</strong></summary>
-        <x-inputs-kvgroup
-          id="kvgroup-resource_utilizations"
-          cib-object="{{ .CloneID }}"
-          options-api="/api/data-interface/fetch-resource-utilizations"
-          submit-api="/api/data-interface/submit-resource-utilizations">
-        </x-inputs-kvgroup>
       </details>
 
       <div style="margin-top: 20px; text-align: center;">
