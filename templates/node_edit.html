@@ -54,8 +54,8 @@
             <x-inputs-kvgroup
               id="kvgroup-node_attributes"
               cib-object="{{ .NodeName }}"
-              options-api="/api/data-interface/fetch-node-attributes"
-              submit-api="/api/data-interface/submit-node-attributes">
+              options-api="/api/cib/node/attributes/fetch"
+              submit-api="/api/cib/node/attributes/submit">
             </x-inputs-kvgroup>
           </details>
 
@@ -64,8 +64,8 @@
             <x-inputs-kvgroup
               id="kvgroup-node_utilizations"
               cib-object="{{ .NodeName }}"
-              options-api="/api/data-interface/fetch-node-utilizations"
-              submit-api="/api/data-interface/submit-node-utilizations">
+              options-api="/api/cib/node/utilizations/fetch"
+              submit-api="/api/cib/node/utilizations/submit">
             </x-inputs-kvgroup>
           </details>
 
@@ -74,7 +74,7 @@
             <!-- I would rather expect `onclick="history.back()"` however old hawk forwards to /cib/live/config/edit -->
             <a class="btn btn-white" href="/cib/live/config/edit">Back</a>
           </div>
-          
+
         </div>
       </div>
     </div>
@@ -88,7 +88,7 @@
       <li>The value stored in <code>corosync.conf</code> under <code>name</code> in the <code>nodelist</code></li>
       <li>The value of <code>uname -n</code></li>
     </ol>
-    
+
     <h4>Attributes</h3>
     <p>Node attributes are a special type of option that applies to a node.</p>
     <p>Beyond the basic definition of a node, the administrator can describe

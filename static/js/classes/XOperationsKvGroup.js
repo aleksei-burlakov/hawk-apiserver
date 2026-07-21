@@ -15,6 +15,8 @@ class XOperationsKvGroup extends window.XKvGroupBase {
     // Extract attributes
     this.#optionsApi = this.getAttribute("options-api");
     this.#submitApi = this.getAttribute("submit-api");
+    this.#resourceID = this.getAttribute("resource-id");
+    const resourceAgent = this.getAttribute("resource-agent");
 
     this.#container = this.shadowRoot;
 
@@ -53,9 +55,6 @@ class XOperationsKvGroup extends window.XKvGroupBase {
 
     controlWrap.appendChild(addBtn);
     this.#container.appendChild(this.#selectRow);
-
-    this.#resourceID = window.resourceData?.ResourceID || "";
-    const resourceAgent = window.resourceData?.ResourceAgent || "";
 
     this.#init({ ResourceID: this.#resourceID, ResourceAgent: resourceAgent }, true);
   }

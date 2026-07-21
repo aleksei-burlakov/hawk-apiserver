@@ -8,6 +8,7 @@ class XKvGroup extends window.XKvGroupBase {
   #resourceAgent;
   #optionsApi;
   #submitApi;
+  #initialValues = {};
   #readyResolve;
   #ready; // => initialized, now you can createOption(...)
   #inited = false;
@@ -22,10 +23,13 @@ class XKvGroup extends window.XKvGroupBase {
     this.#inited = true;
 
     this.#name = this.getAttribute("name");
+    // resourceID is either PrimitiveID or CloneID
     this.#resourceID = this.getAttribute("resource-id");
+    // if clone => resourceAgent is ignored in the backend, just leave it empty
     this.#resourceAgent = this.getAttribute("resource-agent");
     this.#optionsApi = this.getAttribute("options-api");
     this.#submitApi = this.getAttribute("submit-api");
+    this.#initialValues = JSON.parse(this.getAttribute("initial-values") || "{}");
 
     this.#container = this.shadowRoot;
 
@@ -57,11 +61,11 @@ class XKvGroup extends window.XKvGroupBase {
     this.#container.appendChild(this.#selectRow);
 
     // Fetch data
-    this.#resourceID = window.resourceData?.ResourceID || "";
-    this.#resourceAgent = window.resourceData?.ResourceAgent || "";
     this.#init(true)
       .catch(err => console.error("Failed to init x-kvgroup:", err))
-      .finally(() => this.#readyResolve());
+      .finally(() => this.#readyResolve())
+      .then(() => this.applyKvMap(this.#initialValues))
+      .catch(err => console.error("Failed to apply initial x-kvgroup values:", err));
   }
 
   #init(appendBlank) {
@@ -81,7 +85,8 @@ class XKvGroup extends window.XKvGroupBase {
       .then(content => {
         const contentOptions = content.Options || [];
         contentOptions.forEach(o => {
-          const optionObj = new SelectOption(o.Name, o.Type, o.DefaultValue, o.Shortdesc, o.Longdesc, o.PossibleValues);
+          const optionObj = new SelectOption(o.Name, o.Type, o.DefaultValue,
+              o.Shortdesc, o.Longdesc, o.PossibleValues);
           this.#selectObj.appendOption(optionObj);
           if (o.CibID) {
             const frontendValue = "";
@@ -180,6 +185,8 @@ class XKvGroup extends window.XKvGroupBase {
         required, cibID, cibValue, frontendValue, false);
     }
 
+    if (selectOrInput instanceof Select) this.#setSeleniumSelectName(selectOrInput, name);
+
     const initial = frontendValue || cibValue || defaultValue || "";
     if (selectOrInput instanceof Select) {
       selectOrInput.setValue(initial);
@@ -212,6 +219,20 @@ class XKvGroup extends window.XKvGroupBase {
     } else {
       this.#container.appendChild(divContainer);
     }
+  }
+
+  /* #WORKAROUND: and it's only required by the selenium test
+   * ref: hawk_test_driver.py#TARGET_ROLE_FORMAT = '//select[... and contains(@name, "{}[meta][target-role]")]'
+   * ( Here we give select a name e.g. <select name="clone[meta][target-role]" ) */
+  #setSeleniumSelectName(selectObj, name) {
+    if (!this.hasAttribute("resource-id")) return;
+
+    const resourceType = this.hasAttribute("resource-agent") ? "temp_primitive" : "clone";
+    const attributeType = this.#name === "meta_attributes"
+      ? "meta"
+      : this.#name.replace(/s$/, "");
+
+    selectObj.getHTML().name = `${resourceType}[${attributeType}][${name}]`;
   }
 
   restoreOption(inputObj) {
@@ -260,7 +281,7 @@ class XKvGroup extends window.XKvGroupBase {
       return { id: opID, name: attrName, value };
     });
 
-    const primitive = {
+    const resource = {
       id: this.#resourceID,
       [this.#name]: {
         id: `${this.#resourceID}-${this.#name}`,
@@ -271,7 +292,7 @@ class XKvGroup extends window.XKvGroupBase {
     return fetch(this.#submitApi, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(primitive)
+      body: JSON.stringify(resource)
     })
       .then(async res => {
         if (!res.ok) throw new Error(await res.text() || "Unknown error");

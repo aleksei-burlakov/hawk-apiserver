@@ -19,6 +19,10 @@
   text-align: right;
 }
 
+.kvsection-row-thin label {
+  font-weight: normal;
+}
+
 .kvsection-row button {
   flex: 0 0 auto;
   height: 100%;

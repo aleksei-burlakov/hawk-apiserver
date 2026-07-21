@@ -147,7 +147,26 @@ func fetchFullPrimitiveFromCib(ResourceID string, ResourceAgent string) (CrmReso
 	}
 
 	// 4. Get current values of the attributes from cib.xml
-	err = enrichMetadataWithCibValues(&metadata, ResourceID)
+	err = enrichPrimitiveMetadataWithCibValues(&metadata, ResourceID)
+	if err != nil {
+		return CrmResourceMetadata{}, err
+	}
+
+	return metadata, nil
+}
+
+func fetchFullCloneFromCib(CloneID string) (CrmResourceMetadata, error) {
+	metadata := CrmResourceMetadata{}
+
+	// 1. Copy the default meta_attributes, default operations and help info
+	metadata.RscDefaults = GetCloneDefaults()
+
+	if CloneID == "" {
+		return metadata, nil
+	}
+
+	// 2. Get current values of the attributes from cib.xml
+	err := enrichCloneMetaAttributesWithCibValues(&metadata, CloneID)
 	if err != nil {
 		return CrmResourceMetadata{}, err
 	}
@@ -158,6 +177,42 @@ func fetchFullPrimitiveFromCib(ResourceID string, ResourceAgent string) (CrmReso
 func FetchResourceMetaAttributes(w http.ResponseWriter, r *http.Request) {
 	id, agent := parseIDandAgent(w, r)
 	metadata, err := fetchFullPrimitiveFromCib(id, agent)
+	if err != nil {
+		log.Printf("Failed to get cib values: %v", err)
+		http.Error(w, "Failed to get cib values: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var content SelectContent
+	content.Shortdesc = metadata.Shortdesc
+	content.Longdesc = metadata.Longdesc
+	for _, param := range metadata.RscDefaults {
+		content.Options = append(content.Options,
+			SelectOption{
+				param.Name,
+				param.Content.Default,
+				param.Shortdesc,
+				param.Longdesc,
+				param.Content.Type,
+				param.Content.PossibleValues,
+				param.Content.Required,
+				param.Content.CibID,
+				param.Content.CibValue,
+			})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(content); err != nil {
+		log.Printf("Failed to encode data: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+}
+
+func FetchCloneMetaAttributes(w http.ResponseWriter, r *http.Request) {
+	cloneID, _ := parseIDandAgent(w, r)
+
+	metadata, err := fetchFullCloneFromCib(cloneID)
 	if err != nil {
 		log.Printf("Failed to get cib values: %v", err)
 		http.Error(w, "Failed to get cib values: "+err.Error(), http.StatusInternalServerError)

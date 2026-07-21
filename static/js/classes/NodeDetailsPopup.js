@@ -49,8 +49,8 @@ class NodeDetailsPopup extends Popup {
     const idTable = this.#makeIdTable();
 
     const [utilizationTable, attributesTable] = await Promise.all([
-      this.#makeKvTable("utilization", "/api/data-interface/fetch-node-utilizations"),
-      this.#makeKvTable("attributes", "/api/data-interface/fetch-node-attributes")
+      this.#makeKvTable("utilization", "/api/cib/node/utilizations/fetch"),
+      this.#makeKvTable("attributes", "/api/cib/node/attributes/fetch")
     ]);
 
     modalBody.innerHTML = ""; // clear the "Loading..." text
