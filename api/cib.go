@@ -981,29 +981,24 @@ func CloneEditHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		childResource := "stateful1"
-		/*
-			nodes, err := GetCIBNodes()
-			if err != nil {
-				http.Error(w, "[CloneEditHandler] Failed to get nodes in 'cibadmin -Ql': "+err.Error(), http.StatusInternalServerError)
-				return
-			}
+		cib, _, err := GetCIB()
+		if err != nil {
+			http.Error(w, "[CloneEditHandler] Failed to get clones in 'cibadmin -Ql': "+err.Error(),
+				http.StatusInternalServerError)
+			return
+		}
 
-			var thisNode Node
-			thisNodeFound := false
-
-			for _, node := range nodes {
-				if node.ID == cloneID {
-					thisNode = node
-					thisNodeFound = true
-				}
+		childResource := ""
+		for _, clone := range cib.Configuration.Clones {
+			if clone.ID == cloneID {
+				childResource = clone.Primitives[0].ID
+				break
 			}
-
-			if thisNodeFound == false {
-				http.Error(w, "[CloneEditHandler] Failed to find nodes with ID "+cloneID, http.StatusInternalServerError)
-				return
-			}
-		*/
+		}
+		if childResource == "" {
+			http.Error(w, "Resource not found", http.StatusNotFound)
+			return
+		}
 
 		// If we do Configuration -> Add Resource -> Primitive -> Create
 		// It would redirect to the cib/live/primitives/{primitive-id}/edit?flash={created|updated}
