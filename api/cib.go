@@ -283,14 +283,8 @@ func getResourceEvents(resourceName string, nodeStates []NodeState) []LRMOp {
 }
 
 func GetCIBResources() ([]ResourceRow, error) {
-	cmd := exec.Command("cibadmin", "-Ql")
-	out, err := cmd.Output()
+	cib, _, err := GetCIB()
 	if err != nil {
-		return nil, err
-	}
-
-	var cib CIB
-	if err := xml.Unmarshal(out, &cib); err != nil {
 		return nil, err
 	}
 
@@ -353,14 +347,8 @@ func GetCIBResources() ([]ResourceRow, error) {
 }
 
 func GetCIBNodes() ([]Node, error) {
-	cmd := exec.Command("cibadmin", "-Ql")
-	out, err := cmd.Output()
+	cib, _, err := GetCIB()
 	if err != nil {
-		return nil, err
-	}
-
-	var cib CIB
-	if err := xml.Unmarshal(out, &cib); err != nil {
 		return nil, err
 	}
 
@@ -997,7 +985,7 @@ func CloneEditHandler(w http.ResponseWriter, r *http.Request) {
 		/*
 			nodes, err := GetCIBNodes()
 			if err != nil {
-				http.Error(w, "[NodesEditHandler] Failed to get nodes in 'cibadmin -Ql': "+err.Error(), http.StatusInternalServerError)
+				http.Error(w, "[CloneEditHandler] Failed to get nodes in 'cibadmin -Ql': "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -1012,38 +1000,40 @@ func CloneEditHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if thisNodeFound == false {
-				http.Error(w, "[NodesEditHandler] Failed to find nodes with ID "+cloneID, http.StatusInternalServerError)
+				http.Error(w, "[CloneEditHandler] Failed to find nodes with ID "+cloneID, http.StatusInternalServerError)
 				return
 			}
-
-			// If we do Configuration -> Add Resource -> Primitive -> Create
-			// It would redirect to the cib/live/primitives/{primitive-id}/edit?flash={created|updated}
-			flash := r.URL.Query().Get("flash")
-			var alertType, alertMsg string
-
-			switch flash {
-			case "created":
-				alertType = "success"
-				alertMsg = "Node created successfully"
-			case "updated":
-				alertType = "success"
-				alertMsg = "Node updated successfully"
-			case "renamed":
-				alertType = "success"
-				alertMsg = "Node renamed successfully"
-			case "error":
-				alertType = "danger"
-				alertMsg = r.URL.Query().Get("msg")
-				if alertMsg == "" {
-					alertMsg = "There was an error processing the primitive."
-				}
-			}
 		*/
+
+		// If we do Configuration -> Add Resource -> Primitive -> Create
+		// It would redirect to the cib/live/primitives/{primitive-id}/edit?flash={created|updated}
+		flash := r.URL.Query().Get("flash")
+		var alertType, alertMsg string
+
+		switch flash {
+		case "created":
+			alertType = "success"
+			alertMsg = "Clone created successfully"
+		case "updated":
+			alertType = "success"
+			alertMsg = "Clone updated successfully"
+		case "renamed":
+			alertType = "success"
+			alertMsg = "Clone renamed successfully"
+		case "error":
+			alertType = "danger"
+			alertMsg = r.URL.Query().Get("msg")
+			if alertMsg == "" {
+				alertMsg = "There was an error processing the primitive."
+			}
+		}
 
 		renderTemplate(w, "clone_edit", map[string]any{
 			"Title":         "Edit Node",
 			"CloneID":       cloneID,
 			"ChildResource": childResource,
+			"AlertType":     alertType,
+			"AlertMessage":  alertMsg,
 		})
 		return
 	}
