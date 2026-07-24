@@ -1005,7 +1005,7 @@ func updateNvpair(nvpair Nvpair, section string, resourceID string) ([]byte, err
 func deleteNvpair(cibAttributeID string, section string, resourceID string, removeParent bool) ([]byte, error) {
 	var queryXPath string
 	if removeParent {
-		queryXPath = fmt.Sprintf("//instance_attributes[@id='%s-%s']", resourceID, section)
+		queryXPath = fmt.Sprintf("//%s[@id='%s-%s']", section, resourceID, section)
 	} else {
 		queryXPath = fmt.Sprintf("//nvpair[@id='%s']", cibAttributeID)
 	}
