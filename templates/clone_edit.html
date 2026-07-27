@@ -1,6 +1,11 @@
 
 {{ define "content" }}
 <link rel="stylesheet" href="/static/css/primitive_edit.css">
+<script>
+  window.resourceData = {
+    CloneID: "{{ .CloneID }}"
+  };
+</script>
 <script src="/static/js/XCSS.js"></script>
 <script src="/static/js/classes/SelectOption.js"></script>
 <script src="/static/js/classes/DeletePopup.js"></script>
@@ -24,13 +29,12 @@
       </x-alert>
     {{ end }}
 
-
     <div style="display: flex; justify-content: space-between; align-items: center;">
       <h2><i class="fas fa-copy"></i> Edit Clone: {{ .CloneID }}</h2>
       <div id="copy-rename-delete-container">
         <button class="btn btn-white" name="copy" onclick=""><i class="fas fa-plus"></i> Create</button>
         <button class="btn btn-white" name="rename" onclick=""><i class="fas fa-font"></i> Rename</button>
-        <button class="btn btn-white text-danger" name="delete" onclick=""><i class="fas fa-trash"></i> Delete</button>
+        <button class="btn btn-white text-danger" name="delete" onclick="new DeletePopup(window.resourceData.CloneID)"><i class="fas fa-trash"></i> Delete</button>
       </div>
     </div>
 
