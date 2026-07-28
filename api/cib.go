@@ -143,7 +143,7 @@ type Primitive struct {
 
 type Clone struct {
 	ID             string        `xml:"id,attr" json:"id"`
-	Primitives     []Primitive   `xml:"primitive"`
+	Primitives     []Primitive   `xml:"primitive" json:"primitive"`
 	MetaAttributes MetaAttribute `xml:"meta_attributes" json:"meta_attributes"`
 }
 

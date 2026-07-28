@@ -41,7 +41,7 @@ class XSelect extends HTMLElement {
     //        kvgroup-meta_attributes
     style.textContent = `
       .kvsection-row { display:flex; align-items:center; gap:26px; margin-bottom:8px; }
-      .form-control { width:60%; padding:6px 10px; border:1px solid #ccc; border-radius:4px; font-size:14px; box-sizing:border-box; }
+      .form-control { width:60%; padding:6px 10px; border:1px solid #ccc; border-radius:4px; background-color:#fff; font-size:14px; box-sizing:border-box; }
       .kvsection-row > label { margin-left:auto; flex:0 0 80px; text-align:right; }
       .form-control:focus { border-color: #66afe9; outline: 0; box-shadow: 0 0 8px rgba(102, 175, 233, 0.6); }
     `;

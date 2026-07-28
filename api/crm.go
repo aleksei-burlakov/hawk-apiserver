@@ -413,6 +413,37 @@ func PrimitiveCreateHandler(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
+func CloneCreateHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: before creating the clone try creating it in the shadow-cib
+	var frontendClone Clone
+
+	if err := json.NewDecoder(r.Body).Decode(&frontendClone); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		log.Printf("[PrimitiveCreateHandler] JSON decode error: %v", err)
+		return
+	}
+
+	log.Printf("Creating resource %s with fields: %+v\n", frontendClone.ID, frontendClone)
+
+	args := []string{"configure", "clone", frontendClone.ID, frontendClone.Primitives[0].ID}
+
+	// Meta Attributes
+	metaStarted := false
+	for _, nvpair := range frontendClone.MetaAttributes.NVPairs {
+		// skip empty values like target-role="" (which happens in the test_copy_primitive)
+		if nvpair.Value == "" {
+			continue
+		}
+		if !metaStarted {
+			args = append(args, "meta")
+			metaStarted = true
+		}
+		args = append(args, fmt.Sprintf("%s=%s", nvpair.Name, nvpair.Value))
+	}
+
+	crmExecute(w, args, fmt.Sprintf("Created %s", frontendClone.ID))
+}
+
 func ResourceDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	var ResourceID string
 

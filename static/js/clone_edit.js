@@ -14,44 +14,26 @@ if (url.searchParams.has("flash")) {
     history.replaceState({}, "", url);
 }
 
-function setAgentInfo() {
-    const agentShortdesc = document.getElementById('agent-shortdesc');
-    const agentLongdesc = document.getElementById('agent-longdesc');
-
-    // copy-paste from #buildParametersTable()
-    fetch('/api/cib/clone/params/fetch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ResourceID, ResourceAgent })
-    })
-        .then(async res => {
-            if (!res.ok) throw new Error(await res.text() || "Unknown error");
-            return res.json();
-        })
-        .then(content => {
-            agentShortdesc.textContent = content.Shortdesc.trim();
-            const contentOptions = content.Options || [];
-
-            // Split Longdesc into paragraphs by empty lines or single newline
-            const paragraphs = content.Longdesc.trim().split(/\n\n+/);
-
-            paragraphs.forEach(line => {
-                const p = document.createElement("p");
-                p.textContent = line;           // safe, no HTML injection
-                agentLongdesc.appendChild(p);
-            });
-        })
-        .catch(err => console.error("Failed to init field-shortdesc and field-longdesc", err));
-}
-
-setAgentInfo();
-
-function clickApplyCreateButton() {
+function clickApplyCreateButton(applyButton) {
     const isCreateMode = applyButton.textContent === "Create";
 
      // sanity check
     if (isCreateMode) {
-        // T.B.A.
+        const cloneNameInput = document.getElementById("input-clone-id");
+        const cloneName = (cloneNameInput?.value || "").trim();
+
+        if (!cloneName) {
+            showFlash("danger", "Please enter a Clone ID before creating a clone.");
+            return;
+        }
+
+        const childResourceXSelect = document.getElementById("child-resource-xselect");
+        const childResourceName = (childResourceXSelect?.value || "").trim();
+
+        if (!childResourceName) {
+            showFlash("danger", "Please select a resource agent Type before creating a primitive.");
+            return;
+        }
     }
 
     const metaAttributes = document.getElementById("kvgroup-meta_attributes");
@@ -77,15 +59,10 @@ function clickApplyCreateButton() {
         return;
     }
 
-    // isCreateMode (create a clone from scratch? Ruby does it from scratch)
-    const clone = new Clone( // TODO.
-        //document.getElementById("input-clone-id"),
-        //document.getElementById("class-xselect"),
-        //document.getElementById("provider-xselect"),
-        //document.getElementById("type-xselect"),
-        //params,
-        metaAttributes,
-        //operations
+    const clone = new Clone(
+        document.getElementById("input-clone-id"),
+        document.getElementById("child-resource-xselect"),
+        metaAttributes
     );
 
     clone.create();
@@ -94,9 +71,7 @@ function clickApplyCreateButton() {
 function toggleUpdateCreateMode(createMode) {
     const resourceIdInput = document.getElementById('input-clone-id');
     const applyButton = document.getElementById('apply-create-button');
-    //const classXSelect = document.getElementById("class-xselect");
-    //const providerXSelect = document.getElementById("provider-xselect");
-    //const typeXSelect = document.getElementById("type-xselect");
+    const childResourceXSelect = document.getElementById("child-resource-xselect");
     const copyRenameDeleteContainer = document.getElementById("copy-rename-delete-container");
 
     if (createMode) {
@@ -108,9 +83,7 @@ function toggleUpdateCreateMode(createMode) {
             copyRenameDeleteContainer.style.display = "none";
         }
 
-        //classXSelect.enableEdit();
-        //providerXSelect.enableEdit();
-        //typeXSelect.enableEdit();
+        childResourceXSelect.enableEdit();
         updateCreateButtonState();
     } else {
         resourceIdInput.readOnly = true;
@@ -118,61 +91,8 @@ function toggleUpdateCreateMode(createMode) {
         applyButton.disabled = false; // unnecessary, but to be sure
         applyButton.classList.add("btn-success");
 
-        //classXSelect.disableEdit();
-        //providerXSelect.disableEdit();
-        //typeXSelect.disableEdit();
+        childResourceXSelect.disableEdit();
     }
-}
-
-function changeClass() {
-    const classXSelect = document.getElementById("class-xselect");
-    const providerXSelect = document.getElementById("provider-xselect");
-
-    const selected = classXSelect.selectedOption();
-    if (!selected) return;
-
-    const className = selected.getName();
-    const newArgs = { Class: className };
-
-    providerXSelect.setAttribute("api-args", JSON.stringify(newArgs));
-
-    const btn = document.getElementById('apply-create-button');
-    if (btn.textContent === "Create") {
-        btn.disabled = true;
-        btn.classList.remove("btn-success");
-    }
-    /* Manually trigger the cascade (it's a #WORKAROUND,
-     * The changeProvider wont trigger on the page load). */
-    providerXSelect.reload(newArgs).then(() => {
-        changeProvider();
-    });
-}
-
-function changeProvider() {
-    const providerXSelect = document.getElementById("provider-xselect");
-    const classXSelect = document.getElementById("class-xselect");
-    const typeXSelect = document.getElementById("type-xselect");
-
-    if (!providerXSelect || !classXSelect || !typeXSelect) {
-        console.warn("One of the selects is not found");
-        return;
-    }
-
-    const classOption = classXSelect.selectedOption();
-    const providerOption = providerXSelect.selectedOption();
-
-    if (!classOption) {
-        console.warn("Class not selected");
-        return;
-    }
-
-    const args = { Class: classOption.getName() };
-    if (providerOption) {
-        args.Provider = providerOption.getName();
-    }
-
-    //typeXSelect.reload(args);
-    typeXSelect.reload(args).then(updateCreateButtonState);
 }
 
 function updateCreateButtonState() {

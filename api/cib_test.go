@@ -1,13 +1,28 @@
 package api
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestCloneJSONMapsPrimitive(t *testing.T) {
+	const payload = `{
+		"id": "clone-1",
+		"primitive": [{"id": "primitive-1"}],
+		"meta_attributes": {"id": "clone-1-meta_attributes", "nvpair": []}
+	}`
+
+	var clone Clone
+	require.NoError(t, json.NewDecoder(strings.NewReader(payload)).Decode(&clone))
+	require.Len(t, clone.Primitives, 1)
+	assert.Equal(t, "primitive-1", clone.Primitives[0].ID)
+}
 
 func installFakeCrm(t *testing.T, script string) {
 	t.Helper()
