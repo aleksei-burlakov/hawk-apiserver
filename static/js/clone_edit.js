@@ -19,7 +19,7 @@ function setAgentInfo() {
     const agentLongdesc = document.getElementById('agent-longdesc');
 
     // copy-paste from #buildParametersTable()
-    fetch('/api/cib/resource/params/fetch', {
+    fetch('/api/cib/clone/params/fetch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ResourceID, ResourceAgent })
@@ -46,7 +46,13 @@ function setAgentInfo() {
 
 setAgentInfo();
 
-function clickApplyButton() {
+function clickApplyCreateButton() {
+    const isCreateMode = applyButton.textContent === "Create";
+
+     // sanity check
+    if (isCreateMode) {
+        // T.B.A.
+    }
 
     const metaAttributes = document.getElementById("kvgroup-meta_attributes");
     const result = metaAttributes.submitSanityCheck();
@@ -55,30 +61,46 @@ function clickApplyButton() {
         return;
     }
 
-    metaAttributes.submit().then(() => {
-        const url = new URL(window.location.href);
-        url.searchParams.set("flash", "updated");
-        // wait 1 sec and update the page.
-        setTimeout(() => {
-            window.location.href = url.toString();
-        }, 1000);
-    })
-    .catch(err => {
-        console.error("Apply failed:", err);
-        showFlash("danger", `There was a problem updating the clone:\n${err.message}`);
-    });
+    if (isCreateMode == false) {
+        metaAttributes.submit().then(() => {
+            const url = new URL(window.location.href);
+            url.searchParams.set("flash", "updated");
+            // wait 1 sec and update the page.
+            setTimeout(() => {
+                window.location.href = url.toString();
+            }, 1000);
+        })
+        .catch(err => {
+            console.error("Apply failed:", err);
+            showFlash("danger", `There was a problem updating the clone:\n${err.message}`);
+        });
+        return;
+    }
+
+    // isCreateMode (create a clone from scratch? Ruby does it from scratch)
+    const clone = new Clone( // TODO.
+        //document.getElementById("input-clone-id"),
+        //document.getElementById("class-xselect"),
+        //document.getElementById("provider-xselect"),
+        //document.getElementById("type-xselect"),
+        //params,
+        metaAttributes,
+        //operations
+    );
+
+    clone.create();
 }
 
 function toggleUpdateCreateMode(createMode) {
-    const resourceIdInput = document.getElementById('input-resource-id');
+    const resourceIdInput = document.getElementById('input-clone-id');
     const applyButton = document.getElementById('apply-create-button');
-    const classXSelect = document.getElementById("class-xselect");
-    const providerXSelect = document.getElementById("provider-xselect");
-    const typeXSelect = document.getElementById("type-xselect");
+    //const classXSelect = document.getElementById("class-xselect");
+    //const providerXSelect = document.getElementById("provider-xselect");
+    //const typeXSelect = document.getElementById("type-xselect");
     const copyRenameDeleteContainer = document.getElementById("copy-rename-delete-container");
 
     if (createMode) {
-        resourceIdInput.value += "-1"; // it's concatenation
+        resourceIdInput.value = "";
         resourceIdInput.readOnly = false;
         applyButton.textContent = "Create";
 
@@ -86,9 +108,9 @@ function toggleUpdateCreateMode(createMode) {
             copyRenameDeleteContainer.style.display = "none";
         }
 
-        classXSelect.enableEdit();
-        providerXSelect.enableEdit();
-        typeXSelect.enableEdit();
+        //classXSelect.enableEdit();
+        //providerXSelect.enableEdit();
+        //typeXSelect.enableEdit();
         updateCreateButtonState();
     } else {
         resourceIdInput.readOnly = true;
@@ -96,9 +118,9 @@ function toggleUpdateCreateMode(createMode) {
         applyButton.disabled = false; // unnecessary, but to be sure
         applyButton.classList.add("btn-success");
 
-        classXSelect.disableEdit();
-        providerXSelect.disableEdit();
-        typeXSelect.disableEdit();
+        //classXSelect.disableEdit();
+        //providerXSelect.disableEdit();
+        //typeXSelect.disableEdit();
     }
 }
 
@@ -155,15 +177,9 @@ function changeProvider() {
 
 function updateCreateButtonState() {
     const btn = document.getElementById('apply-create-button');
-    const type = document.getElementById('type-xselect');
     if (btn.textContent !== "Create") return;
 
-    //const ready = (type.value && String(type.value).trim() !== "");
-    const opt = type.selectedOption?.();
-    const ready = !!(opt && String(opt.getName()).trim() !== "");
-
-    btn.disabled = !ready;
-    btn.classList.toggle("btn-success", ready);
+    btn.classList.toggle("btn-success", true);
 }
 
 // TODO: showFlash is too dirty. Remove it later.
@@ -197,8 +213,8 @@ const fieldLongdesc = document.getElementById('field-longdesc');
 
 /* custom elements x-select and x-operations-kvgroup
  * already have their own listeners.
- * input-resource-id is only left w/o it's own listener. */
-const input = document.getElementById("input-resource-id");
+ * input-clone-id is only left w/o it's own listener. */
+const input = document.getElementById("input-clone-id");
 input.addEventListener("mouseenter", () => {
     fieldShortdesc.textContent = "Resource ID";
     fieldLongdesc.textContent = "Unique identifier for the resource. May not contain spaces.";

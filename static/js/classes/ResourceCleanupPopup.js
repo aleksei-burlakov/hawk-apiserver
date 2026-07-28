@@ -9,7 +9,7 @@ class ResourceCleanupPopup extends Popup {
 
     this.#resourceID = name;
     this.#nodes = nodes;
-    this.#api = "/api/cib/primitive/cleanup";
+    this.#api = "/api/cib/resource/cleanup";
 
     // Header
     const header = document.createElement("div");

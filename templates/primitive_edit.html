@@ -55,7 +55,7 @@
     <div class="form-section">
       <div class="kvsection-row">
         <label>Resource ID</label>
-        <input id="input-resource-id" type="text" value="{{ .ResourceID }}" class="form-control" name="primitive[id]" readonly style="width:60%;">
+        <input id="input-primitive-id" type="text" value="{{ .ResourceID }}" class="form-control" name="primitive[id]" readonly style="width:60%;">
       </div>
 
       <x-select
@@ -63,7 +63,7 @@
         label="Class"
         description="Standard which the resource agent conforms to."
         value="{{ .Class }}"
-        options-api="/api/cib/resource/classes/fetch"
+        options-api="/api/cib/primitive/classes/fetch"
         onchange="changeClass()"
         disabled="true">
       </x-select>
@@ -73,7 +73,7 @@
         label="Provider"
         description="Vendor or project which provided the resource agent."
         value="{{ .Provider }}"
-        options-api="/api/cib/resource/providers/fetch"
+        options-api="/api/cib/primitive/providers/fetch"
         onchange="changeProvider()"
         disabled="true"
         hide-when-empty="true">
@@ -84,13 +84,13 @@
         label="Type"
         description="Resource agent name."
         value="{{ .Type }}"
-        options-api="/api/cib/resource/types/fetch"
+        options-api="/api/cib/primitive/types/fetch"
         disabled="true">
       </x-select>
 
       <button class="btn btn-white btn-info" onclick='new RAInfoPopup("{{ .ResourceID }}", "{{ .ResourceAgent }}")'>
-        <i class="fas fa-info"></i></button>
-
+        <i class="fas fa-info"></i>
+      </button>
     </div>
 
     <div class="accordion">
@@ -144,7 +144,7 @@
         <!-- I would rather expect `onclick="history.back()"` however old hawk forwards to /cib/live/config/edit -->
         <a class="btn btn-white" href="/cib/live/config/edit">Back</a>
       </div>
-      
+
     </div>
   </div>
   <div class="edit-right">

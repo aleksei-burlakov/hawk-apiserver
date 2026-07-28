@@ -1032,7 +1032,7 @@ func PrimitiveUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func PrimitiveRenameHandler(w http.ResponseWriter, r *http.Request) {
+func ResourceRenameHandler(w http.ResponseWriter, r *http.Request) {
 	var renameID struct {
 		OldID string `json:"oldID"`
 		NewID string `json:"newID"`

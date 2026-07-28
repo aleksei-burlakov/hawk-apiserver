@@ -32,9 +32,14 @@
     <div style="display: flex; justify-content: space-between; align-items: center;">
       <h2><i class="fas fa-copy"></i> Edit Clone: {{ .CloneID }}</h2>
       <div id="copy-rename-delete-container">
-        <button class="btn btn-white" name="copy" onclick=""><i class="fas fa-plus"></i> Create</button>
-        <button class="btn btn-white" name="rename" onclick=""><i class="fas fa-font"></i> Rename</button>
-        <button class="btn btn-white text-danger" name="delete" onclick="new DeletePopup(window.resourceData.CloneID)"><i class="fas fa-trash"></i> Delete</button>
+        <button class="btn btn-white" name="copy" onclick="toggleUpdateCreateMode(true)">
+          <i class="fas fa-plus"></i> Create</button>
+        <button class="btn btn-white" name="rename" onclick="new RenamePopup(window.resourceData.CloneID)">
+          <i class="fas fa-font"></i> Rename
+        </button>
+        <button class="btn btn-white text-danger" name="delete" onclick="new DeletePopup(window.resourceData.CloneID)">
+          <i class="fas fa-trash"></i> Delete
+        </button>
       </div>
     </div>
 
@@ -49,15 +54,15 @@
         <input id="input-child-resource" type="text" value="{{ .ChildResource }}" class="form-control" readonly style="width:60%;">
       </div>
 
-      <!--<x-select
+      <x-select
         id="class-xselect"
         label="Class"
         description="Standard which the resource agent conforms to."
         value="{{ .Class }}"
-        options-api="/api/cib/resource/classes/fetch"
+        options-api="/api/cib/clone/child-resources/fetch"
         onchange="changeClass()"
         disabled="true">
-      </x-select>-->
+      </x-select>
     </div>
 
     <div class="accordion">
@@ -73,7 +78,7 @@
       </details>
 
       <div style="margin-top: 20px; text-align: center;">
-        <button id="apply-create-button" name="submit" class="btn btn-success" onclick="clickApplyButton()">Apply</button>
+        <button id="apply-create-button" name="submit" class="btn btn-success" onclick="clickApplyCreateButton()">Apply</button>
         <!-- I would rather expect `onclick="history.back()"` however old hawk forwards to /cib/live/config/edit -->
         <a class="btn btn-white" href="/cib/live/config/edit">Back</a>
       </div>
