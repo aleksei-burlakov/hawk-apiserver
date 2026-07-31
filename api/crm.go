@@ -413,7 +413,42 @@ func PrimitiveCreateHandler(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func PrimitiveDeleteHandler(w http.ResponseWriter, r *http.Request) {
+func CloneCreateHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: before creating the clone try creating it in the shadow-cib
+	var frontendClone Clone
+
+	if err := json.NewDecoder(r.Body).Decode(&frontendClone); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		log.Printf("[CloneCreateHandler] JSON decode error: %v", err)
+		return
+	}
+	if frontendClone.ID == "" || len(frontendClone.Primitives) == 0 || frontendClone.Primitives[0].ID == "" {
+		http.Error(w, "Clone ID and child resource are required", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Creating resource %s with fields: %+v\n", frontendClone.ID, frontendClone)
+
+	args := []string{"configure", "clone", frontendClone.ID, frontendClone.Primitives[0].ID}
+
+	// Meta Attributes
+	metaStarted := false
+	for _, nvpair := range frontendClone.MetaAttributes.NVPairs {
+		// skip empty values like target-role="" (which happens in the test_copy_primitive)
+		if nvpair.Value == "" {
+			continue
+		}
+		if !metaStarted {
+			args = append(args, "meta")
+			metaStarted = true
+		}
+		args = append(args, fmt.Sprintf("%s=%s", nvpair.Name, nvpair.Value))
+	}
+
+	crmExecute(w, args, fmt.Sprintf("Created %s", frontendClone.ID))
+}
+
+func ResourceDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	var ResourceID string
 
 	if err := json.NewDecoder(r.Body).Decode(&ResourceID); err != nil {
@@ -427,7 +462,7 @@ func PrimitiveDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func PrimitiveStartHandler(w http.ResponseWriter, r *http.Request) {
+func ResourceStartHandler(w http.ResponseWriter, r *http.Request) {
 	var ResourceID string
 
 	if err := json.NewDecoder(r.Body).Decode(&ResourceID); err != nil {
@@ -441,7 +476,7 @@ func PrimitiveStartHandler(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func PrimitiveStopHandler(w http.ResponseWriter, r *http.Request) {
+func ResourceStopHandler(w http.ResponseWriter, r *http.Request) {
 	var ResourceID string
 
 	if err := json.NewDecoder(r.Body).Decode(&ResourceID); err != nil {
@@ -455,7 +490,7 @@ func PrimitiveStopHandler(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func PrimitivePromoteHandler(w http.ResponseWriter, r *http.Request) {
+func ClonePromoteHandler(w http.ResponseWriter, r *http.Request) {
 	var ResourceID string
 
 	if err := json.NewDecoder(r.Body).Decode(&ResourceID); err != nil {
@@ -469,7 +504,7 @@ func PrimitivePromoteHandler(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func PrimitiveDemoteHandler(w http.ResponseWriter, r *http.Request) {
+func CloneDemoteHandler(w http.ResponseWriter, r *http.Request) {
 	var ResourceID string
 
 	if err := json.NewDecoder(r.Body).Decode(&ResourceID); err != nil {
@@ -483,7 +518,7 @@ func PrimitiveDemoteHandler(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func PrimitiveMaintenanceOnHandler(w http.ResponseWriter, r *http.Request) {
+func ResourceMaintenanceOnHandler(w http.ResponseWriter, r *http.Request) {
 	var ResourceID string
 
 	if err := json.NewDecoder(r.Body).Decode(&ResourceID); err != nil {
@@ -497,7 +532,7 @@ func PrimitiveMaintenanceOnHandler(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func PrimitiveMaintenanceOffHandler(w http.ResponseWriter, r *http.Request) {
+func ResourceMaintenanceOffHandler(w http.ResponseWriter, r *http.Request) {
 	var ResourceID string
 
 	if err := json.NewDecoder(r.Body).Decode(&ResourceID); err != nil {
@@ -511,7 +546,7 @@ func PrimitiveMaintenanceOffHandler(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func PrimitiveMigrateHandler(w http.ResponseWriter, r *http.Request) {
+func ResourceMigrateHandler(w http.ResponseWriter, r *http.Request) {
 	var pair struct {
 		ResourceID  string `json:"ResourceID"`
 		Destination string `json:"Destination"`
@@ -529,7 +564,7 @@ func PrimitiveMigrateHandler(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func PrimitiveCleanupHandler(w http.ResponseWriter, r *http.Request) {
+func ResourceCleanupHandler(w http.ResponseWriter, r *http.Request) {
 	var pair struct {
 		ResourceID  string `json:"ResourceID"`
 		Destination string `json:"Destination"`
@@ -547,7 +582,7 @@ func PrimitiveCleanupHandler(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func PrimitiveClearHandler(w http.ResponseWriter, r *http.Request) {
+func ResourceClearHandler(w http.ResponseWriter, r *http.Request) {
 	var ResourceID string
 
 	if err := json.NewDecoder(r.Body).Decode(&ResourceID); err != nil {
@@ -579,7 +614,7 @@ func FetchCrmStatus(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func FetchResourceClasses(w http.ResponseWriter, r *http.Request) {
+func FetchPrimitiveClasses(w http.ResponseWriter, r *http.Request) {
 	cmd := exec.Command("crm", "ra", "classes")
 	out, err := cmd.Output()
 	if err != nil {
@@ -619,7 +654,7 @@ func FetchResourceClasses(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func FetchResourceProviders(w http.ResponseWriter, r *http.Request) {
+func FetchPrimitiveProviders(w http.ResponseWriter, r *http.Request) {
 	var request struct {
 		Class string `json:"Class"`
 	}
@@ -665,7 +700,7 @@ func FetchResourceProviders(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func FetchResourceTypes(w http.ResponseWriter, r *http.Request) {
+func FetchPrimitiveTypes(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Class    string `json:"Class"`
 		Provider string `json:"Provider"`
@@ -701,6 +736,26 @@ func FetchResourceTypes(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(content); err != nil {
 		log.Printf("Failed to encode resource types: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+}
+
+func FetchChildResources(w http.ResponseWriter, r *http.Request) {
+	cib, _, err := GetCIB()
+	if err != nil {
+		log.Printf("[FetchChildResources] Failed to get CIB: %v", err)
+		http.Error(w, "Failed to get CIB resources: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var content SelectContent
+	for _, primitive := range cib.Configuration.Primitives {
+		content.Options = append(content.Options, SelectOption{Name: primitive.ID})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(content); err != nil {
+		log.Printf("[FetchChildResources] Failed to encode child resources: %v", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }

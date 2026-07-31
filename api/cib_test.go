@@ -1,13 +1,30 @@
 package api
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestCloneJSONMapsPrimitive(t *testing.T) {
+	const payload = `{
+		"id": "clone-1",
+		"primitive": [{"id": "primitive-1"}],
+		"meta_attributes": {"id": "clone-1-meta_attributes", "nvpair": []}
+	}`
+
+	var clone Clone
+	require.NoError(t, json.NewDecoder(strings.NewReader(payload)).Decode(&clone))
+	require.Len(t, clone.Primitives, 1)
+	assert.Equal(t, "primitive-1", clone.Primitives[0].ID)
+}
 
 func installFakeCrm(t *testing.T, script string) {
 	t.Helper()
@@ -103,4 +120,36 @@ exit 102
 
 	require.Error(t, err)
 	assert.Equal(t, 102, pacemakerRC)
+}
+
+func TestEnrichCloneMetaAttributesAllowsMissingMetaAttributes(t *testing.T) {
+	installFakeCibadmin(t, `#!/bin/sh
+printf '%s\n' '<clone id="clone-1"><primitive id="primitive-1"/></clone>'
+`)
+
+	metadata := CrmResourceMetadata{RscDefaults: GetCloneDefaults()}
+
+	require.NoError(t, enrichCloneMetaAttributesWithCibValues(&metadata, "clone-1"))
+}
+
+func TestFetchFullCloneFromCibSkipsEnrichmentForEmptyID(t *testing.T) {
+	installFakeCibadmin(t, `#!/bin/sh
+exit 1
+`)
+
+	metadata, err := fetchFullCloneFromCib("")
+
+	require.NoError(t, err)
+	require.Equal(t, GetCloneDefaults(), metadata.RscDefaults)
+}
+
+func TestCloneCreateRejectsMissingChildResource(t *testing.T) {
+	request := httptest.NewRequest(http.MethodPost, "/api/cib/clone/create",
+		strings.NewReader(`{"id":"clone-1","primitive":[]}`))
+	response := httptest.NewRecorder()
+
+	assert.NotPanics(t, func() {
+		CloneCreateHandler(response, request)
+	})
+	assert.Equal(t, http.StatusBadRequest, response.Code)
 }

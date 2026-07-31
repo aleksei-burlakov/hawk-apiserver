@@ -98,13 +98,13 @@ class ResourceClearPopup extends ConfirmActionPopup {
     const message = `This will remove any migration constraints for the` +
       ` resource <strong>${name}</strong>. Do you want to continue?`;
 
-    super(name, "/api/cib/primitive/clear", message, "Clear failed:");
+    super(name, "/api/cib/resource/clear", message, "Clear failed:");
   }
 }
 
 class ResourceMaintenanceOnOffPopup extends ConfirmActionPopup {
   constructor(name, isOn = false) {
-    const api = `/api/cib/primitive/maintenance-${isOn ? "on" : "off"}`;
+    const api = `/api/cib/resource/maintenance-${isOn ? "on" : "off"}`;
     const message = `This will <strong>${isOn ? "enable" : "disable"}</strong> maintenance` +
       ` mode for resource <strong>${name}</strong>. Do you want to continue?`;
     const errMessage = `Resource maintenance mode ${isOn ? "on" : "off"} failed:`;
@@ -117,8 +117,8 @@ class ResourcePromoteDemotePopup extends ConfirmActionPopup {
   constructor(name, promote = true) {
     const action = promote ? "promote" : "demote";
     const api = promote
-      ? "/api/cib/primitive/promote"
-      : "/api/cib/primitive/demote";
+      ? "/api/cib/clone/promote"
+      : "/api/cib/clone/demote";
     const message = `This will <strong>${action}</strong>` +
       ` the resource <strong>${name}</strong>. Do you want to continue?`;
     const errMessage = `${promote ? "Promote" : "Demote"} failed:`;
@@ -131,8 +131,8 @@ class ResourceStartStopPopup extends ConfirmActionPopup {
   constructor(name, start = true) {
     const action = start ? "start" : "stop";
     const api = start
-      ? "/api/cib/primitive/start"
-      : "/api/cib/primitive/stop";
+      ? "/api/cib/resource/start"
+      : "/api/cib/resource/stop";
     const message = `This will <strong>${action}</strong>` +
       ` the resource <strong>${name}</strong>. Do you want to continue?`;
     const errMessage = `${start ? "Start" : "Stop"} failed:`;

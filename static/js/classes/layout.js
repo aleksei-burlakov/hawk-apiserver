@@ -1,6 +1,6 @@
 async function updateClusterStatusIndicator() {
 
-  const statusRes = await fetch("/api/data-interface/fetch-cluster-details", {
+  const statusRes = await fetch("/api/cib/cluster/details/fetch", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ host: window.location.hostname }),

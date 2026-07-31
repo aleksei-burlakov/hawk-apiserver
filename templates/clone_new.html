@@ -1,0 +1,103 @@
+
+{{ define "content" }}
+<link rel="stylesheet" href="/static/css/primitive_edit.css">
+<script>
+  window.resourceData = {
+    CloneID: "{{ .CloneID }}"
+  };
+</script>
+<script src="/static/js/XCSS.js"></script>
+<script src="/static/js/classes/SelectOption.js"></script>
+<script src="/static/js/classes/DeletePopup.js"></script>
+<script src="/static/js/classes/RenamePopup.js"></script>
+<script src="/static/js/classes/XAlert.js"></script>
+<script src="/static/js/classes/Select.js"></script>
+<script src="/static/js/classes/XSelect.js"></script>
+<script src="/static/js/classes/Input.js"></script>
+<script src="/static/js/classes/XKvGroupBase.js"></script>
+<script src="/static/js/classes/XKvGroup.js"></script>
+<script src="/static/js/classes/Clone.js"></script>
+<script src="/static/js/clone_new.js" defer></script>
+
+<div class="edit-layout">
+  <div class="edit-left">
+
+    {{ if .AlertMessage }}
+      <x-alert
+        type="{{ .AlertType }}"
+        message="{{ .AlertMessage }}"
+        visible="true">
+      </x-alert>
+    {{ end }}
+
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h2><i class="fas fa-copy"></i> Create Clone</h2>
+    </div>
+
+    <br>
+
+    <div class="form-section">
+      <div class="kvsection-row kvsection-row-thin">
+        <label>Clone ID</label>
+        <input
+          id="input-clone-id"
+          type="text"
+          name="clone[id]"
+          class="form-control"
+          style="width:60%;"
+        >
+      </div>
+
+      <x-select
+        id="child-resource-xselect"
+        name="clone[child]"
+        label="Child Resource"
+        description=""
+        value="{{ .ChildResource }}"
+        options-api="/api/cib/clone/child-resources/fetch"
+        onchange="changeClass()"
+        disabled="false">
+      </x-select>
+    </div>
+
+    <br>
+
+    <div class="accordion">
+      <details id="details-meta_attributes" open>
+        <summary><strong>Meta Attributes</strong></summary>
+        <x-kvgroup
+          id="kvgroup-meta_attributes"
+          name="meta_attributes"
+          resource-id="{{ .CloneID }}"
+          options-api="/api/cib/clone/meta-attributes/fetch"
+          submit-api="/api/cib/clone/meta-attributes/submit"
+          initial-values='{"target-role":"Stopped"}'>
+        </x-kvgroup>
+      </details>
+
+      <div style="margin-top: 20px; text-align: center;">
+        <button id="apply-create-button" name="submit" class="btn btn-success" onclick="clickCreateButton()">Create</button>
+        <!-- I would rather expect `onclick="history.back()"` however old hawk forwards to /cib/live/config/edit -->
+        <a class="btn btn-white" href="/cib/live/config/edit">Back</a>
+      </div>
+
+    </div>
+  </div>
+  <div class="edit-right">
+    <h4>Clone</h4>
+    <p>Clones are resources that can run simultaneously on multiple nodes in your cluster.</p>
+    <p>To create a clone, define an ID and select the child resource that you want to use
+      as clone. Any regular resources or resource groups can be cloned. Instances of cloned
+      resources may behave identically. However, they may also be configured differently,
+      depending on which node they are hosted.
+    </p>
+    <p>An example of a resource that can be configured as clone is
+      <code>ocf:pacemaker:controld</code> for cluster file systems like OCFS2.
+    </p>
+    <br>
+    <h4 id="agent-shortdesc"></h4><div id="agent-longdesc"></div>
+    <br>
+    <h4 id="field-shortdesc"></h4><p id="field-longdesc"></p>
+  </div>
+</div>
+{{ end }}

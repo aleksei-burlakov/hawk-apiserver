@@ -8,7 +8,7 @@ const fieldLongdesc = document.getElementById('field-longdesc');
 
 /* custom elements x-select and x-operations-kvgroup
  * already have their own listeners.
- * input-resource-id is only left w/o it's own listener. */
+ * input-node-id is only left w/o it's own listener. */
 const inputNodeID = document.getElementById("input-node-id");
 inputNodeID.addEventListener("mouseenter", () => {
   fieldShortdesc.textContent = "Node ID";

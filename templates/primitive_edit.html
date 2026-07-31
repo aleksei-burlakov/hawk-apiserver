@@ -47,15 +47,23 @@
       <h2><i class="fas fa-pencil-alt"></i> Edit Primitive: {{ .ResourceID }}</h2>
       <div id="copy-rename-delete-container">
         <button class="btn btn-white" name="copy" onclick="toggleUpdateCreateMode(true)"><i class="fas fa-copy"></i> Copy</button>
-        <button class="btn btn-white" name="rename" onclick="new RenamePopup()"><i class="fas fa-font"></i> Rename</button>
-        <button class="btn btn-white text-danger" name="delete" onclick="new DeletePopup()"><i class="fas fa-trash"></i> Delete</button>
+        <button class="btn btn-white" name="rename" onclick="new RenamePopup(window.resourceData.ResourceID)"><i class="fas fa-font"></i> Rename</button>
+        <button class="btn btn-white text-danger" name="delete" onclick="new DeletePopup(window.resourceData.ResourceID)"><i class="fas fa-trash"></i> Delete</button>
       </div>
     </div>
 
     <div class="form-section">
       <div class="kvsection-row">
         <label>Resource ID</label>
-        <input id="input-resource-id" type="text" value="{{ .ResourceID }}" class="form-control" name="primitive[id]" readonly style="width:60%;">
+        <input
+          id="input-primitive-id"
+          type="text"
+          value="{{ .ResourceID }}"
+          class="form-control"
+          name="primitive[id]"
+          readonly
+          style="width:60%;"
+        >
       </div>
 
       <x-select
@@ -63,7 +71,7 @@
         label="Class"
         description="Standard which the resource agent conforms to."
         value="{{ .Class }}"
-        options-api="/api/data-interface/fetch-resource-classes"
+        options-api="/api/cib/primitive/classes/fetch"
         onchange="changeClass()"
         disabled="true">
       </x-select>
@@ -73,7 +81,7 @@
         label="Provider"
         description="Vendor or project which provided the resource agent."
         value="{{ .Provider }}"
-        options-api="/api/data-interface/fetch-resource-providers"
+        options-api="/api/cib/primitive/providers/fetch"
         onchange="changeProvider()"
         disabled="true"
         hide-when-empty="true">
@@ -84,13 +92,13 @@
         label="Type"
         description="Resource agent name."
         value="{{ .Type }}"
-        options-api="/api/data-interface/fetch-resource-types"
+        options-api="/api/cib/primitive/types/fetch"
         disabled="true">
       </x-select>
 
       <button class="btn btn-white btn-info" onclick='new RAInfoPopup("{{ .ResourceID }}", "{{ .ResourceAgent }}")'>
-        <i class="fas fa-info"></i></button>
-
+        <i class="fas fa-info"></i>
+      </button>
     </div>
 
     <div class="accordion">
@@ -101,8 +109,8 @@
           name="instance_attributes"
           resource-id="{{ .ResourceID }}"
           resource-agent="{{ .ResourceAgent }}"
-          options-api="/api/data-interface/fetch-resource-params"
-          submit-api="/api/data-interface/submit-resource-params">
+          options-api="/api/cib/resource/params/fetch"
+          submit-api="/api/cib/resource/params/submit">
         </x-kvgroup>
       </details>
 
@@ -112,8 +120,8 @@
           id="kvgroup-operations"
           resource-id="{{ .ResourceID }}"
           resource-agent="{{ .ResourceAgent }}"
-          options-api="/api/data-interface/fetch-resource-operations"
-          submit-api="/api/data-interface/submit-resource-operations">
+          options-api="/api/cib/resource/operations/fetch"
+          submit-api="/api/cib/resource/operations/submit">
         </x-operations-kvgroup>
       </details>
 
@@ -124,8 +132,8 @@
           name="meta_attributes"
           resource-id="{{ .ResourceID }}"
           resource-agent="{{ .ResourceAgent }}"
-          options-api="/api/data-interface/fetch-resource-meta-attributes"
-          submit-api="/api/data-interface/submit-resource-meta-attributes">
+          options-api="/api/cib/resource/meta-attributes/fetch"
+          submit-api="/api/cib/resource/meta-attributes/submit">
         </x-kvgroup>
       </details>
 
@@ -134,8 +142,8 @@
         <x-inputs-kvgroup
           id="kvgroup-resource_utilizations"
           cib-object="{{ .ResourceID }}"
-          options-api="/api/data-interface/fetch-resource-utilizations"
-          submit-api="/api/data-interface/submit-resource-utilizations">
+          options-api="/api/cib/resource/utilizations/fetch"
+          submit-api="/api/cib/resource/utilizations/submit">
         </x-inputs-kvgroup>
       </details>
 
@@ -144,7 +152,7 @@
         <!-- I would rather expect `onclick="history.back()"` however old hawk forwards to /cib/live/config/edit -->
         <a class="btn btn-white" href="/cib/live/config/edit">Back</a>
       </div>
-      
+
     </div>
   </div>
   <div class="edit-right">

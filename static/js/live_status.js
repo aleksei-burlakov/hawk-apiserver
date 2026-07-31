@@ -691,7 +691,7 @@ function populateNodesTab(nodes, crmResources, crmClones, cibResources){
 }
 
 async function getFenceHistory(nodeName) {
-    const res = await fetch("/api/data-interface/fetch-node-fence-history", {
+    const res = await fetch("/api/cib/node/fence/history/fetch", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(nodeName)
@@ -703,7 +703,7 @@ async function getFenceHistory(nodeName) {
 async function updateClusterStatus() {
 
     // 1.
-    const res1 = await fetch("/api/data-interface/fetch-cluster-details", {
+    const res1 = await fetch("/api/cib/cluster/details/fetch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ host: window.location.hostname }),
@@ -740,7 +740,7 @@ async function updateClusterStatus() {
     }
 
     // 2. 'crm status --as-xml'
-    const res2 = await fetch("/api/data-interface/fetch-crm-status", {
+    const res2 = await fetch("/api/crm/status/fetch", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
     });
@@ -755,9 +755,9 @@ async function updateClusterStatus() {
      * that is easy to consume in the frontend,
      * and simply merge all known cluster data in the new schema in the backend.
      * TODO?: merge
-     *   /api/data-interface/fetch-crm-status
+     *   /api/crm/status/fetch
      * and
-     *   /api/data-interface/fetch-cib-resources
+     *   /api/cib/resources/fetch
      * into one entry-point.
      *
      * OLD COMMENT:
@@ -770,7 +770,7 @@ async function updateClusterStatus() {
      * So, all the status fields (but constraints) come from `crm status`.
      * Constraints come separatelly from `cibadmin -Ql`.
      */
-    const res3 = await fetch("/api/data-interface/fetch-cib-resources", {
+    const res3 = await fetch("/api/cib/resources/fetch", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
     });

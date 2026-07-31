@@ -73,9 +73,12 @@ class OperationPopup {
 
         this.#internalXKvGroup = document.createElement("x-kvgroup");
         this.#internalXKvGroup.setAttribute("name", this.getName());
-        // /api/data-interface/resource-operation/fetch-attributes <=> opDefaults
-        this.#internalXKvGroup.setAttribute("options-api", "/api/data-interface/resource-operation/fetch-attributes");
+        // /api/cib/resource/operation/attributes/fetch <=> opDefaults
+        this.#internalXKvGroup.setAttribute("options-api",
+            "/api/cib/resource/operation/attributes/fetch");
 
+        // TODO: pass the ResourceID and ResourceAgent as parameters
+        // (avoid using window.resourceData global structure)
         const ResourceID = window.resourceData.ResourceID;
         const ResourceAgent = window.resourceData.ResourceAgent;
 
@@ -138,7 +141,8 @@ class OperationPopup {
 
         const label = document.createElement("label");
         label.htmlFor = inputId;
-        label.innerHTML = `<strong>${labelText}</strong>`; // If this is considered unsafe, we can style separately.
+        // If this is considered unsafe, we can style separately.
+        label.innerHTML = `<strong>${labelText}</strong>`;
 
         const input = document.createElement("input");
         input.type = "text";
@@ -173,6 +177,3 @@ class OperationPopup {
         return this.#internalXKvGroup;
     }
 }
-
-// Expose globally
-window.OperationPopup = OperationPopup;

@@ -142,8 +142,9 @@ type Primitive struct {
 }
 
 type Clone struct {
-	ID         string      `xml:"id,attr" json:"id"`
-	Primitives []Primitive `xml:"primitive"`
+	ID             string        `xml:"id,attr" json:"id"`
+	Primitives     []Primitive   `xml:"primitive" json:"primitive"`
+	MetaAttributes MetaAttribute `xml:"meta_attributes" json:"meta_attributes"`
 }
 
 type MetaAttribute struct {
@@ -282,14 +283,8 @@ func getResourceEvents(resourceName string, nodeStates []NodeState) []LRMOp {
 }
 
 func GetCIBResources() ([]ResourceRow, error) {
-	cmd := exec.Command("cibadmin", "-Ql")
-	out, err := cmd.Output()
+	cib, _, err := GetCIB()
 	if err != nil {
-		return nil, err
-	}
-
-	var cib CIB
-	if err := xml.Unmarshal(out, &cib); err != nil {
 		return nil, err
 	}
 
@@ -352,300 +347,12 @@ func GetCIBResources() ([]ResourceRow, error) {
 }
 
 func GetCIBNodes() ([]Node, error) {
-	cmd := exec.Command("cibadmin", "-Ql")
-	out, err := cmd.Output()
+	cib, _, err := GetCIB()
 	if err != nil {
 		return nil, err
 	}
 
-	var cib CIB
-	if err := xml.Unmarshal(out, &cib); err != nil {
-		return nil, err
-	}
-
 	return cib.Configuration.Nodes, nil
-}
-
-/*****************************
- * default meta attributes
- *****************************/
-
-// copied from hawk -> tableless.rb --> RSC_DEFAULTS
-// TODO: consider using hash-map Name -> Longdesc,Content
-var rscDefaults = []MetaParameter{
-	{
-		Name:     "allow-migrate",
-		Longdesc: "Set to true if the resource agent supports the migrate action",
-		Content: ContentAttr{
-			Type:    "boolean",
-			Default: "false",
-		},
-	},
-	{
-		Name:     "is-managed",
-		Longdesc: "Is the cluster allowed to start and stop the resource?",
-		Content: ContentAttr{
-			Type:    "boolean",
-			Default: "true",
-		},
-	},
-	{
-		Name:     "maintenance",
-		Longdesc: "Resources in maintenance mode are not monitored by the cluster.",
-		Content: ContentAttr{
-			Type:    "boolean",
-			Default: "false",
-		},
-	},
-	{
-		Name:     "migration-threshold",
-		Longdesc: "How many failures may occur for this resource on a node before it's marked ineligible...",
-		Content: ContentAttr{
-			Type:    "integer",
-			Default: "0",
-		},
-	},
-	{
-		Name:     "priority",
-		Longdesc: "If not all resources can be active, lower priority ones will be stopped first.",
-		Content: ContentAttr{
-			Type:    "integer",
-			Default: "0",
-		},
-	},
-	{
-		Name:     "multiple-active",
-		Longdesc: "What should the cluster do if it finds the resource active on more than one node?",
-		Content: ContentAttr{
-			Type:           "enum",
-			Default:        "stop_start",
-			PossibleValues: []string{"block", "stop_only", "stop_start"},
-		},
-	},
-	{
-		Name:     "failure-timeout",
-		Longdesc: "Time to wait before considering the failure 'expired'.",
-		Content: ContentAttr{
-			Type:    "integer",
-			Default: "0",
-		},
-	},
-	{
-		Name:     "resource-stickiness",
-		Longdesc: "How much does the resource prefer to stay where it is?",
-		Content: ContentAttr{
-			Type:    "integer",
-			Default: "0",
-		},
-	},
-	{
-		Name:     "target-role",
-		Longdesc: "What state should the cluster try to maintain for this resource?",
-		Content: ContentAttr{
-			Type:           "enum",
-			Default:        "Stopped",
-			PossibleValues: []string{"Started", "Stopped", "Master"},
-		},
-	},
-	{
-		Name: "restart-type",
-		Content: ContentAttr{
-			Type:           "enum",
-			Default:        "ignore",
-			PossibleValues: []string{"ignore", "restart"},
-		},
-	},
-	{
-		Name: "description",
-		Content: ContentAttr{
-			Type:    "string",
-			Default: "",
-		},
-	},
-	{
-		Name:     "requires",
-		Longdesc: "Conditions required to start the resource.",
-		Content: ContentAttr{
-			Type:           "enum",
-			Default:        "fencing",
-			PossibleValues: []string{"nothing", "quorum", "fencing"},
-		},
-	},
-	{
-		Name:     "remote-node",
-		Longdesc: "The name of the remote-node this resource defines.",
-		Content: ContentAttr{
-			Type:    "string",
-			Default: "",
-		},
-	},
-	{
-		Name:     "remote-port",
-		Longdesc: "Port used for the guest connection.",
-		Content: ContentAttr{
-			Type:    "integer",
-			Default: "3121",
-		},
-	},
-	{
-		Name:     "remote-addr",
-		Longdesc: "The IP address or hostname for remote-node connection.",
-		Content: ContentAttr{
-			Type:    "string",
-			Default: "",
-		},
-	},
-	{
-		Name:     "remote-connect-timeout",
-		Longdesc: "Timeout before a pending guest connection fails.",
-		Content: ContentAttr{
-			Type:    "string",
-			Default: "60s",
-		},
-	},
-}
-
-// copied from hawk -> tableless.rb --> OP_DEFAULTS
-// TODO: consider using hash-map Name -> Longdesc,Content
-var opDefaults = []MetaParameter{
-	{
-		Name:     "interval",
-		Longdesc: "How frequently(in seconds) to perform the operation.",
-		Content: ContentAttr{
-			Type:     "string",
-			Default:  "0",
-			Required: "false",
-		},
-	},
-	{
-		Name:     "timeout",
-		Longdesc: "How long to wait before declaring the action has failed.",
-		Content: ContentAttr{
-			Type:     "string",
-			Default:  "20",
-			Required: "true",
-		},
-	},
-	{
-		Name:     "requires",
-		Longdesc: "What conditions need to be satisfied before this action occurs.",
-		Content: ContentAttr{
-			Type:           "enum",
-			Default:        "fencing",
-			PossibleValues: []string{"nothing", "quorum", "fencing"},
-		},
-	},
-	{
-		Name:     "enabled",
-		Longdesc: "If false, the operation is treated as if it does not exist.",
-		Content: ContentAttr{
-			Type:    "boolean",
-			Default: "true",
-		},
-	},
-	{
-		Name:     "role",
-		Longdesc: "This option only makes sense for recurring operations. It restricts the operation to a specific role. The truly paranoid can even specify role=Stopped which allows the cluster to detect an admin that manually started cluster services.",
-		Content: ContentAttr{
-			Type:           "enum",
-			Default:        "",
-			PossibleValues: []string{"Stopped", "Started", "Slave", "Master"},
-		},
-	},
-	{
-		Name:     "on-fail",
-		Longdesc: "The action to take if this action ever fails.",
-		Content: ContentAttr{
-			Type:           "enum",
-			Default:        "stop",
-			PossibleValues: []string{"ignore", "block", "stop", "restart", "standby", "fence"},
-		},
-	},
-	{
-		Name:     "start-delay",
-		Longdesc: "The delay time(in seconds) before doing the operation",
-		Content: ContentAttr{
-			Type:    "string",
-			Default: "0",
-		},
-	},
-	{
-		Name:     "interval-origin",
-		Longdesc: "The start time of action interval. Follow the ISO8601 standard.",
-		Content: ContentAttr{
-			Type:    "string",
-			Default: "",
-		},
-	},
-	{
-		Name:     "record-pending",
-		Longdesc: "If true, the intention to perform the operation is recorded so that GUIs and CLI tools can indicate that an operation is in progress.",
-		Content: ContentAttr{
-			Type:    "boolean",
-			Default: "false",
-		},
-	},
-	{
-		Name: "description",
-		Content: ContentAttr{
-			Type:    "string",
-			Default: "",
-		},
-	},
-}
-
-// opDescriptions comes from hawk/app/models/template.rb
-// TODO: consider using hash-map Name -> Description
-var opDescriptions = []MetaParameter{{
-	Name:      "template",
-	Shortdesc: "Template",
-	Longdesc:  "Resource template to inherit from.",
-}, {
-	Name:      "clazz",
-	Shortdesc: "Template",
-	Longdesc:  "Resource template to inherit from.",
-}, {
-	Name:      "provider",
-	Shortdesc: "Provider",
-	Longdesc:  "Vendor or project which provided the resource agent.",
-}, {
-	Name:      "type",
-	Shortdesc: "Type",
-	Longdesc:  "Resource agent name.",
-}, {
-	Name:      "op-start",
-	Shortdesc: "Start",
-	Longdesc:  "After the specified timeout period, the operation will be treated as failed.",
-}, {
-	Name:      "op-stop",
-	Shortdesc: "Stop",
-	Longdesc:  "After the specified timeout period, the operation will be treated as failed.",
-}, {
-	Name:      "op-monitor",
-	Shortdesc: "Monitor",
-	Longdesc:  "Define a monitor operation to instruct the cluster to ensure that the resource is still healthy.",
-},
-}
-
-func GetRscDefaults() []MetaParameter {
-	// return a copy to prevent modification
-	result := make([]MetaParameter, len(rscDefaults))
-	copy(result, rscDefaults)
-	return result
-}
-
-func GetOpDefaults() []MetaParameter {
-	// return a copy to prevent modification
-	result := make([]MetaParameter, len(opDefaults))
-	copy(result, opDefaults)
-	return result
-}
-
-func GetOpDescriptions() []MetaParameter {
-	// return a copy to prevent modification
-	result := make([]MetaParameter, len(opDescriptions))
-	copy(result, opDescriptions)
-	return result
 }
 
 func firstActionsByName(actions []Action) []Action {
@@ -667,7 +374,37 @@ func firstActionsByName(actions []Action) []Action {
 	return uniqueActions
 }
 
-func enrichMetadataWithCibValues(metadata *CrmResourceMetadata, resourceID string) error {
+func enrichCloneMetaAttributesWithCibValues(metadata *CrmResourceMetadata, cloneID string) error {
+	// Query the clone itself because meta_attributes is optional. Querying the
+	// child element directly makes cibadmin fail for valid clones without one.
+	queryXPath := fmt.Sprintf("/cib/configuration/resources/clone[@id='%s']", cloneID)
+	cmd := exec.Command("cibadmin", "-Q", "--xpath", queryXPath)
+	out, err := cmd.Output()
+	if err != nil {
+		log.Printf("[enrichCloneMetaAttributesWithCibValues] cibadmin -Q error: %v", err)
+		return err
+	}
+
+	var clone Clone
+	if err := xml.Unmarshal(out, &clone); err != nil {
+		log.Printf("[enrichCloneMetaAttributesWithCibValues] XML unmarshal error: %v", err)
+		return err
+	}
+
+	for _, nv := range clone.MetaAttributes.NVPairs {
+		// search the parameter in MetaAttributes
+		for i := range metadata.RscDefaults {
+			if nv.Name == metadata.RscDefaults[i].Name {
+				metadata.RscDefaults[i].Content.CibID = nv.ID
+				metadata.RscDefaults[i].Content.CibValue = nv.Value
+			}
+		}
+	}
+
+	return nil
+}
+
+func enrichPrimitiveMetadataWithCibValues(metadata *CrmResourceMetadata, resourceID string) error {
 	// 1. Query current XML
 	queryXPath := fmt.Sprintf("/cib/configuration/resources//primitive[@id='%s']", resourceID)
 	cmd := exec.Command("cibadmin", "-Q", "--xpath", queryXPath)
@@ -816,7 +553,7 @@ func ResourceEditHandler(w http.ResponseWriter, r *http.Request) {
 			alertType = "danger"
 			alertMsg = r.URL.Query().Get("msg")
 			if alertMsg == "" {
-				alertMsg = "There was an error processing the primitive."
+				alertMsg = "There was an error processing the clone."
 			}
 		}
 
@@ -839,6 +576,106 @@ func ResourceEditHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.NotFound(w, r)
+}
+
+func CloneEditHandler(w http.ResponseWriter, r *http.Request) {
+	const prefix = "/cib/live/clones"
+
+	// Normalize (collapse //, removes trailing /)
+	cleanPath := path.Clean(r.URL.EscapedPath())
+
+	// must be either exactly the prefix or start with prefix + "/"
+	if cleanPath != prefix && !strings.HasPrefix(cleanPath, prefix+"/") {
+		http.NotFound(w, r)
+		return
+	}
+
+	// pre-parsing
+	cleanPath = strings.TrimSuffix(cleanPath, "/")    // drop ending /
+	cleanPath = strings.TrimPrefix(cleanPath, prefix) // drop prefix
+	cleanPath = strings.TrimPrefix(cleanPath, "/")    // drop the leading slash
+
+	// "{id}/edit" --> handle here
+	if strings.HasSuffix(cleanPath, "/edit") {
+		cloneID := strings.TrimSuffix(cleanPath, "/edit")
+
+		// make sure its {id}, not {id1}/{id2}/...
+		if cloneID == "" || strings.Contains(cloneID, "/") {
+			http.NotFound(w, r)
+			return
+		}
+
+		cib, _, err := GetCIB()
+		if err != nil {
+			http.Error(w, "[CloneEditHandler] Failed to get clones in 'cibadmin -Ql': "+err.Error(),
+				http.StatusInternalServerError)
+			return
+		}
+
+		childResource := ""
+		for _, clone := range cib.Configuration.Clones {
+			if clone.ID == cloneID {
+				if len(clone.Primitives) > 0 {
+					childResource = clone.Primitives[0].ID
+				}
+				break
+			}
+		}
+		if childResource == "" {
+			http.Error(w, "Child resource not found", http.StatusNotFound)
+			return
+		}
+
+		// If we do Configuration -> Add Resource -> Primitive -> Create
+		// It would redirect to the cib/live/primitives/{primitive-id}/edit?flash={created|updated}
+		flash := r.URL.Query().Get("flash")
+		var alertType, alertMsg string
+
+		switch flash {
+		case "created":
+			alertType = "success"
+			alertMsg = "Clone created successfully"
+		case "updated":
+			alertType = "success"
+			alertMsg = "Clone updated successfully"
+		case "renamed":
+			alertType = "success"
+			alertMsg = "Clone renamed successfully"
+		case "error":
+			alertType = "danger"
+			alertMsg = r.URL.Query().Get("msg")
+			if alertMsg == "" {
+				alertMsg = "There was an error processing the primitive."
+			}
+		}
+
+		renderTemplate(w, "clone_edit", map[string]any{
+			"Title":         "Edit Clone",
+			"CloneID":       cloneID,
+			"ChildResource": childResource,
+			"AlertType":     alertType,
+			"AlertMessage":  alertMsg,
+		})
+		return
+	}
+
+	// else --> Ruby
+	if Routehandler != nil {
+		Routehandler.ServeHTTP(w, r)
+		return
+	}
+	http.NotFound(w, r)
+}
+
+func CloneNewHandler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/cib/live/clones/new" && r.URL.Path != "/cib/live/clones/new/" {
+		http.NotFound(w, r)
+		return
+	}
+
+	renderTemplate(w, "clone_new", map[string]any{
+		"Title": "Create Clone",
+	})
 }
 
 func NodesEditHandler(w http.ResponseWriter, r *http.Request) {
@@ -909,7 +746,7 @@ func NodesEditHandler(w http.ResponseWriter, r *http.Request) {
 			alertType = "danger"
 			alertMsg = r.URL.Query().Get("msg")
 			if alertMsg == "" {
-				alertMsg = "There was an error processing the primitive."
+				alertMsg = "There was an error processing the node."
 			}
 		}
 
@@ -963,16 +800,20 @@ func deleteOperation(opID string, resourceID string, removeParent bool) ([]byte,
 	return cmd.CombinedOutput()
 }
 
-func updateNvpair(nvpair Nvpair, section string, resourceID string) ([]byte, error) {
+func updateNvpair(nvpair Nvpair, section string, resourceID string, resourceElement string) ([]byte, error) {
+	if resourceElement != "primitive" && resourceElement != "clone" {
+		return nil, fmt.Errorf("unsupported resource element %q", resourceElement)
+	}
+
 	xmlBytes, err := xml.Marshal(nvpair)
 	if err != nil {
 		log.Printf("[updateCibNvpair] XML marshal error: %v", err)
 		return xmlBytes, err
 	}
 	xmlStr := string(xmlBytes)
-	xmlStr = fmt.Sprintf("<primitive id=\"%s\"><%s id=\"%s-%s\">%s</%s></primitive>", resourceID, section, resourceID, section, xmlStr, section)
+	xmlStr = fmt.Sprintf("<%s id=\"%s\"><%s id=\"%s-%s\">%s</%s></%s>", resourceElement, resourceID, section, resourceID, section, xmlStr, section, resourceElement)
 
-	queryXPath := fmt.Sprintf("//primitive[@id='%s']", resourceID)
+	queryXPath := fmt.Sprintf("//%s[@id='%s']", resourceElement, resourceID) // what about //*[@id='some-id']
 	cmd := exec.Command("cibadmin", "--modify", "--xpath", queryXPath, "--xml-text", xmlStr)
 	/* TODO!!! if it fails, check that the id is unique.
 	     * I have noticed a bug that id might start with a wrong primitive name like here
@@ -1013,7 +854,7 @@ func deleteNvpair(cibAttributeID string, section string, resourceID string, remo
 	return cmd.CombinedOutput()
 }
 
-func applyAttributes(cibAttributes []Nvpair, frontendAttributes []Nvpair, primitiveID string, section string, w http.ResponseWriter) {
+func applyAttributes(cibAttributes []Nvpair, frontendAttributes []Nvpair, resourceID string, section string, resourceElement string, w http.ResponseWriter) {
 	// cibAttributes - what exists
 	// frontendPrimitives - what should be
 
@@ -1029,7 +870,7 @@ func applyAttributes(cibAttributes []Nvpair, frontendAttributes []Nvpair, primit
 		}
 		if !nvpairExistsInFrontend {
 			// if there is only 1 nvpair left --> remove it together with <instance_attributes ...>
-			_, err := deleteNvpair(cibAttributes[i].ID, section, primitiveID, attributesExist <= 1)
+			_, err := deleteNvpair(cibAttributes[i].ID, section, resourceID, attributesExist <= 1)
 			attributesExist--
 			if err != nil {
 				http.Error(w, "Failed to encode updated XML", http.StatusInternalServerError)
@@ -1062,9 +903,9 @@ func applyAttributes(cibAttributes []Nvpair, frontendAttributes []Nvpair, primit
 			continue
 		}
 		if !nvpairExistsInCib { // if the nvpair doesn't exist in cib --> create it
-			newNvpair = Nvpair{ID: primitiveID + "-" + section + "-" + frontendNvpair.Name, Name: frontendNvpair.Name, Value: frontendNvpair.Value}
+			newNvpair = Nvpair{ID: resourceID + "-" + section + "-" + frontendNvpair.Name, Name: frontendNvpair.Name, Value: frontendNvpair.Value}
 		}
-		_, err := updateNvpair(newNvpair, section, primitiveID)
+		_, err := updateNvpair(newNvpair, section, resourceID, resourceElement)
 		if err != nil {
 			http.Error(w, "Failed to execute cibadmin --update", http.StatusInternalServerError)
 			log.Printf("[setPrimitive] cibadmin --update error: %v", err)
@@ -1104,11 +945,11 @@ func PrimitiveUpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	// 3. Apply instance_attributes
 	applyAttributes(cibPrimitive.InstanceAttributes.NVPairs, frontendPrimitive.InstanceAttributes.NVPairs,
-		frontendPrimitive.ID, "instance_attributes", w)
+		frontendPrimitive.ID, "instance_attributes", "primitive", w)
 
 	// 4. Apply meta_attributes
 	applyAttributes(cibPrimitive.MetaAttributes.NVPairs, frontendPrimitive.MetaAttributes.NVPairs,
-		frontendPrimitive.ID, "meta_attributes", w)
+		frontendPrimitive.ID, "meta_attributes", "primitive", w)
 
 	// 5. Apply operations. (TODO: it repeats the SubmitResourceOperations)
 	for _, frontendOp := range frontendPrimitive.Operations {
@@ -1203,7 +1044,7 @@ func PrimitiveUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func PrimitiveRenameHandler(w http.ResponseWriter, r *http.Request) {
+func ResourceRenameHandler(w http.ResponseWriter, r *http.Request) {
 	var renameID struct {
 		OldID string `json:"oldID"`
 		NewID string `json:"newID"`
