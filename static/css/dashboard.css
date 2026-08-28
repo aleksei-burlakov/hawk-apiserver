@@ -68,6 +68,8 @@
 .dashboard-legend .legend-status .status-danger { border-color: #b4310b; background: #b4310b; }
 .dashboard-legend .legend-status .status-offline { border-color: #555; background: #555; }
 
+.nav-tabs .fa-circle.text-success { color: var(--dashboard-green); }
+
 /* Cluster toolbar */
 .cluster-heading,
 .cluster-right-menu,

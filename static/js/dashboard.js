@@ -166,8 +166,8 @@ async function updateDashboard() {
     // 1. Generate the tab
     const tabsPlaceholder = document.getElementById("dashboard-tabs-placeholder");
     tabsPlaceholder.innerHTML = "";
-    addTab(tabsPlaceholder, "hacluster", CLUSTER_STATUS_ONLINE, true);
-    addTab(tabsPlaceholder, "foobar", CLUSTER_STATUS_ONLINE, false);
+    addTab(tabsPlaceholder, "hacluster", clusterDetails.status, true);
+    //addTab(tabsPlaceholder, "foobar", CLUSTER_STATUS_ONLINE, false);
 
     setClusterStatusBar("dashboard-cluster-status-alarm", clusterDetails.summary, clusterDetails.status);
 
