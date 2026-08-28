@@ -1,0 +1,143 @@
+{{ define "content" }}
+<link rel="stylesheet" href="/static/css/dashboard.css">
+<link rel="stylesheet" href="/static/css/common.css">
+<script src="/static/js/XCSS.js"></script>
+<script src="/static/js/classes/XAlert.js"></script>
+<script src="/static/js/classes/Input.js"></script>
+<script src="/static/js/classes/AddClusterPopup.js"></script>
+<script src="/static/js/dashboard.js" defer></script>
+
+<div class="edit-root">
+  <x-alert id="status-alert" visible="false"></x-alert>
+
+  <h1>
+    <i class="fa fa-dashboard page"></i> Dashboard
+    <div class="pull-right">
+      <div class="btn-group" role="group">
+        <button class="btn btn-default" onclick="new AddClusterPopup()">
+          <i class="fa fa-plus"></i>
+          Add Cluster
+        </button>
+      </div>
+    </div>
+  </h1>
+
+  <div class="panel panel-default with-nav-tabs status-panel">
+    <div class="panel-heading">
+      <ul class="nav nav-tabs" role="tablist" id="dashboard-tabs-placeholder">
+
+        <!-- TABS PLACEHOLDER -->
+
+        <li class="dashboard-legend pull-right">
+            <div class="btn-group">
+              <button class="btn btn-default btn-xs dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                Legend
+                <span class="caret"></span>
+              </button>
+              <ul class="dropdown-menu">
+                <li>
+                  <ul class="legend-status">
+                    <li><div class="node-circle status-success"></div>Working resource/node</li>
+                    <li><i class="fa fa-podcast" aria-hidden="true" title="Remote / Guest node"></i>Remote / Guest node</li>
+                    <li><div class="node-circle status-danger"></div>Failing resource/node</li>
+                    <li><i class="fa fa-wrench" aria-hidden="true"></i>Maintenance mode</li>
+                    <li><div class="node-circle status-offline"></div>Offline/standby mode</li>
+                    <li><i class="fa fa-asterisk" aria-hidden="true"></i>Promotable clone</li>
+                    <li><div class="node-circle status-default"></div>Not working resource/node</li>
+                    <li><i class="fa fa-home" aria-hidden="true"></i>Designated coordinator</li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+          </li>
+      </ul>
+    </div>
+
+    <div class="panel-body">
+      <div class="tab-content">
+
+        <!-- HACLUSTER TAB -->
+        <div class="tab-pane active" id="hacluster" role="tabpanel">
+          <div id="hacluster" class="status-table" data-cluster="local_cluster">
+
+                <div id="inner-hacluster" class="panel panel-warning" data-epoch="">
+                    <div class="panel-heading cluster-heading">
+                        <div class="pull-left search"><input type="text" class="form-control" placeholder="Search..."></div>
+                        <ul class="cluster-right-menu pull-right">
+                            <li class="cluster-filter">
+                                <div class="dropdown">
+                                    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fa fa-filter" aria-hidden="true"></i></button>
+                                    <div class="filter-dropdown dropdown-menu" aria-labelledby="dropdownMenu2">
+                                        <div class="filter-header">Show</div>
+                                        <div class="radio"><label class=""><input value="show_all" type="radio" name="optradio">Show all nodes</label></div>
+                                        <div class="radio"><label class=""><input value="online" type="radio" name="optradio">Only Online nodes</label></div>
+                                        <div class="radio"><label class="line-through-filter"><input value="offline" type="radio" name="optradio" disabled="">Only Offline nodes</label></div>
+                                        <div class="radio"><label class="line-through-filter"><input value="maintenance" type="radio" name="optradio" disabled="">Only maintenance nodes</label></div>
+                                        <div class="radio"><label class="line-through-filter"><input value="standby" type="radio" name="optradio" disabled="">Only standby nodes</label></div>
+                                    </div>
+                                </div>
+                            </li>
+                            <li><a class="cluster-link cluster-url" href="" target="_blank"><i class="fa fa-link" aria-hidden="true"></i></a></li>
+                        </ul>
+                    </div>
+                    <div class="panel-body">
+                        <div id="dashboard-cluster-status-alarm" class="hidden">
+                          <a href="/cib/live/crm_config/edit"></a>
+                        </div>
+                        <div class="status-inner-table">
+                            <div id="nodes-table-rows"></div>
+                            <div id="resources-table-rows"></div>
+                            <table class="table table-hover">
+                                <tbody id="hacluster-tbody">
+                                  <!--PLACEHOLDER-->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+             </div>
+
+        </div>
+
+        <!--  SOME OTHER POSSIBLE TAB -->
+        <div class="tab-pane" id="foobar" role="tabpanel">
+
+          <div id="hacluster" class="status-table" data-cluster="local_cluster">
+              <div id="inner-hacluster" class="panel panel-default panel-danger" data-epoch="">
+                <div class="panel-heading cluster-heading">
+                  <div class="pull-left search">
+                    <input type="text" class="form-control" placeholder="Search...">
+                  </div>
+                  <ul class="cluster-right-menu pull-right">
+                    <li class="cluster-filter">
+                      <div class="dropdown">
+                        <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                          <i class="fa fa-filter" aria-hidden="true"></i>
+                        </button>
+                        <div class="filter-dropdown dropdown-menu" aria-labelledby="dropdownMenu2">
+                          <div class="filter-header">
+                            Show
+                          </div>
+                          <div class="radio"><label><input value="show_all" type="radio" name="optradio">Show all nodes</label></div>
+                          <div class="radio"><label><input value="online" type="radio" name="optradio">Only Online nodes</label></div>
+                          <div class="radio"><label><input value="offline" type="radio" name="optradio">Only Offline nodes</label></div>
+                          <div class="radio"><label><input value="maintenance" type="radio" name="optradio">Only maintenance nodes</label></div>
+                          <div class="radio"><label><input value="standby" type="radio" name="optradio">Only standby nodes</label></div>
+                      </div>
+                    </div></li>
+                    <li><a class="cluster-link cluster-url" href="" target="_blank"><i class="fa fa-link" aria-hidden="true"></i></a></li>
+                  </ul>
+                </div>
+                <div class="panel-body">
+                  <div class="cluster-errors"><div class="alert alert-danger">Unexpected server error: 200 OK Retrying every 5 seconds...<pre> Response: 200 OK</pre></div></div>
+                  <div class="status-inner-table"></div>
+                </div>
+              </div>
+          </div>
+
+        </div>
+      </div>
+  </div>
+</div>
+
+{{ end }}
