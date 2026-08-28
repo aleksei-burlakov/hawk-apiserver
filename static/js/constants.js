@@ -6,3 +6,9 @@ const CLUSTER_STATUS_OFFLINE = "offline";
 
 const CLONE_PROMOTED = "master"; // cib.xml uses the old syntax for master/slave
 const CLONE_DEMOTED = "slave";
+
+const RESOURCE_STATUS_STARTED = "started"
+const RESOURCE_STATUS_STOPPED = "stopped"
+const RESOURCE_STATUS_PROMOTED = "promoted"
+const RESOURCE_STATUS_UNPROMOTED = "unpromoted"
+const RESOURCE_STATUS_DEFAULT = ""
