@@ -17,8 +17,7 @@ function insertAllNodesRow(tbody, clusterDetails,  nodes) {
 
         const spanStatusBar = document.createElement("span");
         thNode.appendChild(spanStatusBar);
-        spanStatusBar.className = "status-bar status-success";
-
+        spanStatusBar.className = `status-bar status-${node.online ? "success" : "offline"}`;
         const divNodeName = document.createElement("div");
         thNode.appendChild(divNodeName);
         divNodeName.id = `node-${node?.name}`;
@@ -56,7 +55,7 @@ Stack:  ${clusterDetails?.stack}`;
 
         const iEventsFound = document.createElement("i");
         thNode.appendChild(iEventsFound);
-        iEventsFound.className = "fa fa-refresh text-warning";
+        iEventsFound.className = "fas fa-refresh text-warning";
         iEventsFound.title = node.eventsFound;
     });
 }
@@ -120,6 +119,9 @@ function insertResourceRow(tbody, resource) {
             tdDiv.classList.add("status-danger");
         } else if (resource.roles[i] == RESOURCE_STATUS_DEFAULT){
             tdDiv.classList.add("status-default");
+        } else if (resource.roles[i] == RESOURCE_STATUS_OFFLINE){
+            tdDiv.classList.add("status-offline");
+            tdDiv.title = "Node offline";
         } else {
             tdDiv.classList.add("status-default");
         }
@@ -144,6 +146,30 @@ function addTab(tabsPlaceholder, clusterName, clusterStatus, isActive = false) {
     const iClusterStatus = document.createElement("i");
     aTabName.appendChild(iClusterStatus);
     iClusterStatus.className = getClusterStatusIconClasses(clusterStatus);
+}
+
+function updateRadioSet(nodes) {
+    const onlineNodes = document.getElementById("radio-online-nodes");
+    const offlineNodes = document.getElementById("radio-offline-nodes");
+    const maintenanceNodes = document.getElementById("radio-maintenance-nodes");
+    const standbyNodes = document.getElementById("radio-standby-nodes");
+
+    nodes.forEach(node => {
+        if (node.online == false) {
+            offlineNodes.classList.remove("line-through-filter");
+            offlineNodes.querySelector("input").disabled = false;
+        }
+
+        if (node.maintenance) {
+            maintenanceNodes.classList.remove("line-through-filter");
+            maintenanceNodes.querySelector("input").disabled = false;
+        }
+
+        if (node.standby) {
+            standbyNodes.classList.remove("line-through-filter");
+            standbyNodes.querySelector("input").disabled = false;
+        }
+    })
 }
 
 async function updateDashboard() {
@@ -176,6 +202,8 @@ async function updateDashboard() {
     resources.forEach(resource => {
         insertResourceRow(tbody, resource);
     });
+
+    updateRadioSet(nodes);
 }
 
 updateDashboard();  // call it once to initialize

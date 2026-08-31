@@ -20,6 +20,7 @@ const (
 	ResourceStatusSlave      ResourceRole = "slave"
 	ResourceStatusPromoted   ResourceRole = "promoted"
 	ResourceStatusUnpromoted ResourceRole = "unpromoted"
+	ResourceStatusOffline    ResourceRole = "offline"
 	ResourceStatusDefault    ResourceRole = ""
 )
 

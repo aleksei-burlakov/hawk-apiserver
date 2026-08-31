@@ -12,4 +12,5 @@ const RESOURCE_STATUS_STARTED = "started"
 const RESOURCE_STATUS_STOPPED = "stopped"
 const RESOURCE_STATUS_PROMOTED = "promoted"
 const RESOURCE_STATUS_UNPROMOTED = "unpromoted"
+const RESOURCE_STATUS_OFFLINE = "offline" // node is offline
 const RESOURCE_STATUS_DEFAULT = ""

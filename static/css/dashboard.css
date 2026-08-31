@@ -237,6 +237,12 @@
   background: #b4310b;
 }
 
+.status-inner-table .node-circle.status-offline {
+  border-color: #555;
+  background: #555;
+}
+
+.table-header .status-bar.status-offline,
 .status-inner-table td.text-left .status-bar.status-offline { background: #555; }
 .status-inner-table td.text-left .status-bar.status-danger { background: #555; }
 

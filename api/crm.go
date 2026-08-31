@@ -777,6 +777,9 @@ func FetchDashboardHandler(w http.ResponseWriter, r *http.Request) {
 		ID          string `json:"id"`
 		Name        string `json:"name"`
 		IsDC        bool   `json:"isDC"`
+		Online      bool   `json:"online"`
+		Maintenance bool   `json:"maintenance"`
+		Standby     bool   `json:"standby"`
 		EventsFound string `json:"eventsFound"`
 	}
 
@@ -816,6 +819,9 @@ func FetchDashboardHandler(w http.ResponseWriter, r *http.Request) {
 	for i, node := range crmStatus.Nodes {
 		result.Nodes[i].ID = node.ID
 		result.Nodes[i].Name = node.Name
+		result.Nodes[i].Online = node.Online
+		result.Nodes[i].Maintenance = node.Maintenance
+		result.Nodes[i].Standby = node.Standby
 		result.Nodes[i].IsDC = (result.ClusterDetails.DC == node.Name)
 		result.Nodes[i].EventsFound, _, _ = GetFenceHistory(node.Name)
 	}
@@ -848,10 +854,19 @@ func FetchDashboardHandler(w http.ResponseWriter, r *http.Request) {
 				result.Resources[resourceIndex].Roles[j] = ResourceStatusStopped
 			}
 		} else {
-
+			// set the green circles for all primitive.Nodes (where the resource is running)
 			for _, resourceNode := range primitive.Nodes {
 				if nodeIndex, ok := nodeIndexes[resourceNode.Name]; ok {
 					result.Resources[resourceIndex].Roles[nodeIndex] = ResourceStatusStarted
+				}
+			}
+
+			// set the grey circle for all roles if the node is offline
+			for _, node := range result.Nodes {
+				if node.Online == false {
+					if nodeIndex, ok := nodeIndexes[node.Name]; ok {
+						result.Resources[resourceIndex].Roles[nodeIndex] = ResourceStatusOffline
+					}
 				}
 			}
 		}
