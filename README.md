@@ -45,6 +45,24 @@ The `hawk-api-server` is used currently mainly for hawk usage purposes, and in f
 
 ## Configuration
 
+Set `HAWK_TLS12_CIPHER_SUITES` in `/etc/sysconfig/hawk` to a comma-separated
+list of Go TLS 1.2 cipher suite names, for example:
+
+```sh
+HAWK_TLS12_CIPHER_SUITES="TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+```
+
+Systemd passes this variable to the API server through the existing
+`EnvironmentFile`. When running the binary directly, export the variable.
+An unset or empty value preserves the original four TLS 1.2 cipher suites:
+`TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`,
+`TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA`,
+`TLS_RSA_WITH_AES_256_GCM_SHA384`, and
+`TLS_RSA_WITH_AES_256_CBC_SHA`. Unknown names, empty list
+entries, and TLS 1.3 suite names cause a startup error. TLS 1.3 cipher suites
+are managed by Go and cannot be restricted by this variable. Restart
+`hawk.service` after changing the value.
+
 Pass `-config <config>` as an argument to give the server a
 configuration file. The format is a json dictionary with key / value
 pairs.
