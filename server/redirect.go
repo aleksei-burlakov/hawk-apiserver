@@ -3,34 +3,75 @@ package server
 import (
 	"bufio"
 	"crypto/tls"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
+	"strings"
 )
+
+// cipherSuites parses TLS 1.2 cipher suite names. An empty value uses
+// the server's original four cipher suites.
+// Examples of supported cipher suites:
+//
+//	TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+//	TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+//	TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
+//	TLS_RSA_WITH_AES_256_GCM_SHA384
+//	TLS_RSA_WITH_AES_256_CBC_SHA
+//	...
+func cipherSuites(value string) ([]uint16, error) {
+	if strings.TrimSpace(value) == "" {
+		return []uint16{
+			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+		}, nil
+	}
+	available := make(map[string]uint16)
+	for _, suite := range append(tls.CipherSuites(), tls.InsecureCipherSuites()...) {
+		for _, version := range suite.SupportedVersions {
+			if version == tls.VersionTLS12 {
+				available[suite.Name] = suite.ID
+				break
+			}
+		}
+	}
+	var selected []uint16
+	for _, name := range strings.Split(value, ",") {
+		name = strings.TrimSpace(name)
+		id, ok := available[name]
+		if !ok {
+			return nil, fmt.Errorf("/etc/sysconfig/hawk#HAWK_TLS12_CIPHER_SUITES: unknown or unsupported TLS 1.2 cipher suite %q", name)
+		}
+		selected = append(selected, id)
+	}
+	return selected, nil
+}
 
 // ListenAndServeWithRedirect enables seamless HTTP -> HTTPS redirect
 // on the same port. This is useful for Hawk so that if someone
 // accesses the :7630 port over HTTP, it'll automagically redirect to
 // HTTPS.
 func ListenAndServeWithRedirect(addr string, handler http.Handler, cert string, key string) {
+	suites, err := cipherSuites(os.Getenv("HAWK_TLS12_CIPHER_SUITES"))
+	if err != nil {
+		log.Fatal(err)
+	}
 	config := &tls.Config{
 		MinVersion:               tls.VersionTLS12,
 		CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
 		PreferServerCipherSuites: true,
-		CipherSuites: []uint16{
-			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_RSA_WITH_AES_256_CBC_SHA,
-		},
+		CipherSuites:             suites,
 	}
 
 	if config.NextProtos == nil {
 		config.NextProtos = []string{"http/1.1"}
 	}
 
-	var err error
 	config.Certificates = make([]tls.Certificate, 1)
 	config.Certificates[0], err = tls.LoadX509KeyPair(cert, key)
 	if err != nil {
