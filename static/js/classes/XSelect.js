@@ -75,7 +75,9 @@ class XSelect extends HTMLElement {
     /* We set the value already in the constructor (it's easier),
        so now there is no need in extra this.#select.setValue(valueAttr);
     */
-    this.#select.init(apiArgs, false)
+    if (this.getAttribute("defer-init") === "true") return;
+
+    this.loaded = this.#select.init(apiArgs, this.getAttribute("append-blank") === "true")
       .then(() => {
         if (valueAttr && this.#select.getOption(valueAttr)) {
           this.#select.setValue(valueAttr);
@@ -85,8 +87,9 @@ class XSelect extends HTMLElement {
         // i.e. set providers after loading the classes
         // and i.e. set agent types after loading the provider
         emitChange();
+        return true;
       })
-      .catch(err => console.error("x-select init error:", err));
+      .catch(err => { console.error("x-select init error:", err); return false; });
 
   }
 

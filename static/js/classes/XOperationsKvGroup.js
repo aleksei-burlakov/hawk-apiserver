@@ -56,7 +56,7 @@ class XOperationsKvGroup extends window.XKvGroupBase {
     controlWrap.appendChild(addBtn);
     this.#container.appendChild(this.#selectRow);
 
-    this.#init({ ResourceID: this.#resourceID, ResourceAgent: resourceAgent }, true);
+    this.loaded = this.#init({ ResourceID: this.#resourceID, ResourceAgent: resourceAgent }, true);
   }
 
   #createOption(name, type, defaultValue, shortdesc, longdesc, possibleValues) {
@@ -67,14 +67,14 @@ class XOperationsKvGroup extends window.XKvGroupBase {
   #init(apiArguments, appendBlank) {
     if (appendBlank) this.#selectObj.appendBlankOption();
 
-    fetch(this.#optionsApi, {
+    return fetch(this.#optionsApi, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(apiArguments)
     })
-      .then(res => res.json())
-      .then(content => this.#populateOptions(content.Options || []))
-      .catch(err => console.error("Failed to initialize x-operations-kvgroup:", err));
+      .then(async res => { if (!res.ok) throw new Error(await res.text()); return res.json(); })
+      .then(content => { this.#populateOptions(content.Options || []); return true; })
+      .catch(err => { console.error("Failed to initialize x-operations-kvgroup:", err); return false; });
   }
 
   #populateOptions(options) {

@@ -332,15 +332,28 @@ func crmExecute(w http.ResponseWriter, crmArgs []string, successMessage string) 
 }
 
 func PrimitiveCreateHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", "POST")
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 	// TODO: before creating the primitive try creating it in the shadow-cib
 	var frontendPrimitive Primitive
 
-	if err := json.NewDecoder(r.Body).Decode(&frontendPrimitive); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&frontendPrimitive); err != nil {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		log.Printf("[PrimitiveCreateHandler] JSON decode error: %v", err)
 		return
 	}
 
+	if !regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_.:-]*$`).MatchString(frontendPrimitive.ID) || frontendPrimitive.Class == "" || frontendPrimitive.Type == "" || (frontendPrimitive.Class == "ocf" && frontendPrimitive.Provider == "") {
+		http.Error(w, "A valid Resource ID, Class and Type are required; OCF agents also require a Provider", http.StatusBadRequest)
+		return
+	}
+	crmExecute(w, primitiveCreateArgs(frontendPrimitive), fmt.Sprintf("Created %s", frontendPrimitive.ID))
+}
+
+func primitiveCreateArgs(frontendPrimitive Primitive) []string {
 	log.Printf("Creating resource %s with fields: %+v\n", frontendPrimitive.ID, frontendPrimitive)
 
 	raName := frontendPrimitive.Class + ":"
@@ -350,6 +363,9 @@ func PrimitiveCreateHandler(w http.ResponseWriter, r *http.Request) {
 	raName += frontendPrimitive.Type
 
 	args := []string{"configure", "primitive", frontendPrimitive.ID, raName}
+	if len(frontendPrimitive.InstanceAttributes.NVPairs) > 0 {
+		args = append(args, "params")
+	}
 
 	// Parameters
 	for _, nvpair := range frontendPrimitive.InstanceAttributes.NVPairs {
@@ -372,7 +388,7 @@ func PrimitiveCreateHandler(w http.ResponseWriter, r *http.Request) {
 			args = append(args, "interval="+op.Interval)
 		}
 		if op.IntervalOrigin != "" {
-			args = append(args, "interval-origin-="+op.IntervalOrigin)
+			args = append(args, "interval-origin="+op.IntervalOrigin)
 		}
 		if op.OnFail != "" {
 			args = append(args, "on-fail="+op.OnFail)
@@ -408,11 +424,13 @@ func PrimitiveCreateHandler(w http.ResponseWriter, r *http.Request) {
 		args = append(args, fmt.Sprintf("%s=%s", nvpair.Name, nvpair.Value))
 	}
 
-	crmExecute(
-		w,
-		args,
-		fmt.Sprintf("Created %s", frontendPrimitive.ID),
-	)
+	if len(frontendPrimitive.Utilizations) > 0 {
+		args = append(args, "utilization")
+		for _, pair := range frontendPrimitive.Utilizations {
+			args = append(args, fmt.Sprintf("%s=%s", pair.Name, pair.Value))
+		}
+	}
+	return args
 }
 
 func CloneCreateHandler(w http.ResponseWriter, r *http.Request) {

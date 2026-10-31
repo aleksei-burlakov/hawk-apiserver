@@ -63,10 +63,11 @@ class XKvGroup extends window.XKvGroupBase {
     this.#container.appendChild(this.#selectRow);
 
     // Fetch data
-    this.#init(true)
-      .catch(err => console.error("Failed to init x-kvgroup:", err))
+    this.loaded = this.#init(true)
+      .then(() => true)
+      .catch(err => { console.error("Failed to init x-kvgroup:", err); return false; })
       .finally(() => this.#readyResolve())
-      .then(() => this.applyKvMap(this.#initialValues))
+      .then(async ready => { await this.applyKvMap(this.#initialValues); return ready; })
       .catch(err => console.error("Failed to apply initial x-kvgroup values:", err));
   }
 
@@ -94,7 +95,7 @@ class XKvGroup extends window.XKvGroupBase {
           const optionObj = new SelectOption(o.Name, o.Type, o.DefaultValue,
               o.Shortdesc, o.Longdesc, o.PossibleValues);
           this.#selectObj.appendOption(optionObj);
-          if (o.CibID) {
+          if (o.CibID || (this.hasAttribute("create-mode") && o.Required === "true")) {
             const frontendValue = "";
             this.#createInput(o.Name, o.DefaultValue, o.Shortdesc, o.Longdesc, o.Type,
               o.PossibleValues, o.Required, o.CibID, o.CibValue, frontendValue);
