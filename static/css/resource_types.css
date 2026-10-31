@@ -1,0 +1,18 @@
+.resource-types .resource-type-list {
+  margin-top: 30px;
+}
+
+.resource-types .resource-type-list a {
+  text-align: left;
+  white-space: normal;
+}
+
+.resource-types .resource-type-list .pull-right {
+  margin-top: 4px;
+}
+
+@media (max-width: 767px) {
+  .resource-types.edit-layout {
+    flex-direction: column;
+  }
+}
