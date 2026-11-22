@@ -1,0 +1,19 @@
+.gta-page { max-width: 1200px; }
+.gta-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 22px; }
+.gta-heading h1 { margin: 0; font-size: 34px; font-weight: 800; }
+.gta-heading > span { color: #79828f; font-size: 12px; }
+.gta-machine { padding: 20px; border: 1px solid #51425e; border-radius: 18px; background: #191d32; box-shadow: 0 18px 40px #25223f26; }
+.gta-hud { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0 0 18px; color: #b7abc9; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+.gta-hud strong { display: block; margin-top: 6px; color: #81efc6; font: bold 22px monospace; letter-spacing: 0; }
+#gta-wanted { color: #ffb970; }
+#gta-board { display: block; width: 100%; height: auto; border-radius: 10px; background: #1e3941; touch-action: none; outline: none; }
+#gta-board:focus-visible { box-shadow: 0 0 0 2px #f19cd1; }
+#gta-status { min-height: 22px; margin: 18px 0; color: #e0d6ec; text-align: center; font-size: 13px; }
+.gta-actions, .gta-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; }
+.gta-actions button { min-width: 110px; }
+.gta-controls { margin-top: 18px; }
+.gta-controls button { min-height: 44px; padding: 8px 14px; border: 1px solid #685775; border-radius: 8px; background: #302b48; color: #f5eaf6; touch-action: none; user-select: none; }
+.gta-controls button:hover, .gta-controls button:active { background: #534165; }
+.gta-controls button:focus-visible { outline: 2px solid #f19cd1; outline-offset: 2px; }
+.gta-instructions { margin-top: 20px; color: #75838f; text-align: center; line-height: 1.8; font-size: 12px; }
+@media (max-width: 650px) { .gta-heading { display: block; } .gta-heading > span { display: block; margin-top: 10px; } .gta-machine { padding: 10px; } .gta-hud { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

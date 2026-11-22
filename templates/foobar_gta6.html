@@ -1,0 +1,21 @@
+{{ define "content" }}
+<link rel="stylesheet" href="/static/css/foobar.css">
+<link rel="stylesheet" href="/static/css/gta6.css">
+<script src="/static/js/gta6.js" defer></script>
+<div class="foobar-page gta-page">
+  <a class="foobar-back" href="/cib/live/foobar">&#8592; Back to FOOBAR</a>
+  <div class="gta-heading"><div><p class="foobar-eyebrow">Neon coast · Silent arcade</p><h1>GTA 6</h1></div><span>A GTA-inspired mini driving game</span></div>
+  <div class="gta-machine">
+    <div class="gta-hud" aria-label="Game statistics">
+      <div>Cash<strong id="gta-cash">$0</strong></div><div>Deliveries<strong id="gta-deliveries">0</strong></div><div>Car health<strong id="gta-health">100%</strong></div><div>Wanted<strong id="gta-wanted">☆☆☆☆☆</strong></div>
+    </div>
+    <canvas id="gta-board" width="960" height="600" tabindex="0" aria-label="City driving game. Arrow keys or WASD to drive, Space to brake, Shift to boost, P to pause." aria-describedby="gta-status"></canvas>
+    <p id="gta-status" role="status" aria-live="polite">Pick up a job at the yellow marker, then drive to the green destination.</p>
+    <div class="gta-actions"><button id="gta-start" class="btn btn-primary" type="button">Start driving</button><button id="gta-pause" class="btn btn-default" type="button" disabled>Pause</button></div>
+    <div class="gta-controls" role="group" aria-label="Driving controls">
+      <button type="button" data-gta-control="left" aria-label="Steer left">←</button><button type="button" data-gta-control="up" aria-label="Accelerate">↑ Gas</button><button type="button" data-gta-control="right" aria-label="Steer right">→</button><button type="button" data-gta-control="down" aria-label="Reverse">↓ Reverse</button><button type="button" data-gta-control="brake">Brake</button><button type="button" data-gta-control="boost">Boost</button>
+    </div>
+  </div>
+  <p class="gta-instructions">Arrow keys / WASD: drive · Space: brake · Shift: boost · P / Esc: pause · R: restart<br>Complete deliveries to earn cash and repair your car. Crashes attract police; keep your distance to lose them.</p>
+</div>
+{{ end }}

@@ -8,6 +8,8 @@ func FoobarHandler(w http.ResponseWriter, r *http.Request) {
 	case "/cib/live/foobar", "/cib/live/foobar/":
 	case "/cib/live/foobar/packman", "/cib/live/foobar/packman/":
 		page, title = "foobar_packman", "Packman"
+	case "/cib/live/foobar/gta6", "/cib/live/foobar/gta6/":
+		page, title = "foobar_gta6", "GTA 6"
 	default:
 		http.NotFound(w, r)
 		return

@@ -159,7 +159,7 @@ func TestFoobarVisibilityPreference(t *testing.T) {
 			require.NotContains(t, response.Body.String(), `aria-describedby="profile-advanced-help" checked`)
 		}
 		for _, method := range []string{"GET", "HEAD"} {
-			for _, path := range []string{"/cib/live/foobar", "/cib/live/foobar/", "/cib/live/foobar/packman", "/cib/live/foobar/packman/"} {
+			for _, path := range []string{"/cib/live/foobar", "/cib/live/foobar/", "/cib/live/foobar/packman", "/cib/live/foobar/packman/", "/cib/live/foobar/gta6", "/cib/live/foobar/gta6/"} {
 				pageRequest := httptest.NewRequest(method, path, nil)
 				for _, cookie := range request.Cookies() {
 					pageRequest.AddCookie(cookie)
@@ -168,12 +168,12 @@ func TestFoobarVisibilityPreference(t *testing.T) {
 				FoobarHandler(page, pageRequest)
 				if value == "true" {
 					require.Equal(t, 200, page.Code)
-					require.Contains(t, page.Body.String(), "Packman")
-					if strings.Contains(path, "/packman") {
+					require.Contains(t, page.Body.String(), "FOOBAR")
+					if strings.Contains(path, "/packman") || strings.Contains(path, "/gta6") {
 						require.Contains(t, page.Body.String(), "Back to FOOBAR")
 					} else {
 						require.Contains(t, page.Body.String(), `href="/cib/live/foobar/packman"`)
-						require.Contains(t, page.Body.String(), `type="button" disabled`)
+						require.Contains(t, page.Body.String(), `href="/cib/live/foobar/gta6"`)
 					}
 				} else {
 					require.Equal(t, 303, page.Code)
