@@ -111,6 +111,14 @@ Hawk's installation. The `haclient` group must already exist. `DESTDIR`
 and `PREFIX` are supported for staged installations. `make clean` removes
 the generated binaries and header.
 
+`make install` also installs `tools/generate-ssl-cert` into
+`/usr/share/hawk/bin/`. Run it as root before starting the service to
+create missing TLS files. It reads `HAWK_KEY` and `HAWK_CERT`, defaulting
+to `/etc/hawk/hawk.key` and `/etc/hawk/hawk.pem`; the older `SSLGEN_KEY`
+and `SSLGEN_CERT` variables remain supported. Existing files are retained
+and made readable by the service as `root:haclient` with mode `0640`.
+Generation errors go to stderr so they appear in the service journal.
+
 How to debug?
 =============
 

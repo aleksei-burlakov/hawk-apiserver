@@ -7,6 +7,7 @@ LIBDIR ?= $(PREFIX)/lib
 SHAREDIR ?= $(PREFIX)/share
 TEMPLATEDIR ?= $(SHAREDIR)/hawk/templates
 STATICDIR ?= $(SHAREDIR)/hawk/static
+HAWKBINDIR ?= $(SHAREDIR)/hawk/bin
 
 default: build test
 build: tools
@@ -29,6 +30,7 @@ tools: tools/hawk_chkpwd
 install: tools
 	install -D -m 0755 hawk-apiserver "$(DESTDIR)$(SBINDIR)/hawk-apiserver"
 	install -D -o root -g haclient -m 4750 tools/hawk_chkpwd "$(DESTDIR)$(SBINDIR)/hawk_chkpwd"
+	install -D -m 0755 tools/generate-ssl-cert "$(DESTDIR)$(HAWKBINDIR)/generate-ssl-cert"
 	install -d "$(DESTDIR)$(TEMPLATEDIR)"
 	install -m 0644 templates/* "$(DESTDIR)$(TEMPLATEDIR)/"
 	install -d "$(DESTDIR)$(STATICDIR)"

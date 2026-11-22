@@ -1,13 +1,13 @@
-#!/usr/bin/env bash
+#!/usr/bin/bash
 # Copyright (c) 2009-2015 Tim Serong <tserong@suse.com>
 # Copyright (c) 2017 Kristoffer Gronlund <kgronlund@suse.com>
-# See COPYING for license.
+# See tools/COPYING in the source distribution for license.
 
 #
 # Generate a self-signed SSL certificate if necessary. Will not
 # generate certificate if one already exists, so administrator can
 # install a "real" certificate by simply replacing the generated
-# one at /etc/ssl/certs/hawk.pem
+# one at /etc/hawk/hawk.pem
 #
 # NOTE: This is essentially a heavily stripped-back shell version
 # of the more generic check-create-certificate.pl script from WebYaST.
@@ -16,15 +16,10 @@
 #
 
 openssl_bin=/usr/bin/openssl
-c_rehash_bin=/usr/bin/c_rehash
 
-cert_key_file=sslgen.key
-[ -n "$SSLGEN_KEY" ] && cert_key_file=$SSLGEN_KEY
+cert_key_file=${HAWK_KEY:-${SSLGEN_KEY:-/etc/hawk/hawk.key}}
 
-cert_file=sslgen.pem
-[ -n "$SSLGEN_CERT" ] && cert_file=$SSLGEN_CERT
-
-log_file=$(dirname "$0")/certificate.log
+cert_file=${HAWK_CERT:-${SSLGEN_CERT:-/etc/hawk/hawk.pem}}
 
 # Hawk had a strange pair of bugs: generate-ssl-cert will sometimes
 # generate the key in the .pem file and the certificate in the .key
@@ -46,7 +41,15 @@ swap_key_certificate() {
 
 swap_key_certificate
 
-[ -e "$cert_key_file" ] && [ -e "$cert_file" ] && exit 0
+set_certificate_permissions() {
+  chown root:haclient "$cert_key_file" "$cert_file" &&
+    chmod 0640 "$cert_key_file" "$cert_file"
+}
+
+if [ -e "$cert_key_file" ] && [ -e "$cert_file" ]; then
+  set_certificate_permissions
+  exit $?
+fi
 
 echo "No SSL certificate found. Creating one now."
 mkdir -p "$(dirname "$cert_key_file")"
@@ -60,7 +63,7 @@ CN=$(hostname -f)
 [ -z "$CN" ] && CN=$(hostname)
 [ -z "$CN" ] && CN=localhost
 
-$openssl_bin req -x509 -sha256 -nodes -days 1095 -newkey rsa:2048 -batch -config /dev/fd/0 -keyout "$cert_key_file" -out "$cert_file" >"$log_file" 2>&1 <<CONF
+$openssl_bin req -x509 -sha256 -nodes -days 1095 -newkey rsa:2048 -batch -config /dev/fd/0 -keyout "$cert_key_file" -out "$cert_file" >&2 <<CONF
 [req]
 distinguished_name = user_dn
 prompt = no
@@ -76,9 +79,10 @@ rc=$?
 
 if [ $rc -eq 0 ]; then
   swap_key_certificate
-  [ -x "$c_rehash_bin" ] && $c_rehash_bin "$(dirname "$cert_file")" >/dev/null 2>&1
+  set_certificate_permissions
+  rc=$?
 else
-  echo "Could not generate certificate. Please see $log_file for details"
+  echo "Could not generate certificate; see the service journal for details." >&2
 fi
 
 umask "$old_mask"
