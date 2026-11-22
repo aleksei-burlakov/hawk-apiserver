@@ -1,0 +1,22 @@
+.packman-page { max-width: 760px; }
+.packman-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; }
+.packman-heading h1 { margin: 0; font-size: 32px; font-weight: 700; }
+.packman-silent { color: #7b8993; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; }
+.packman-machine { padding: 22px; border: 1px solid #274760; border-radius: 20px; background: #0b1b2e; box-shadow: 0 16px 40px #102d4320; }
+.packman-scoreboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-width: 456px; margin: 0 auto 20px; color: #91a9bf; font-size: 11px; letter-spacing: 1.3px; text-transform: uppercase; }
+.packman-scoreboard strong { display: block; margin-top: 6px; color: #ffda42; font: 700 22px monospace; letter-spacing: 0; }
+#packman-board { display: block; width: 100%; max-width: 456px; height: auto; margin: auto; border-radius: 8px; touch-action: none; outline: none; }
+#packman-board:focus-visible { box-shadow: 0 0 0 2px #00c081; }
+#packman-status { min-height: 36px; margin: 18px auto 12px; max-width: 456px; color: #b4c8da; font-size: 13px; line-height: 1.5; text-align: center; }
+.packman-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.packman-actions button { min-width: 110px; min-height: 38px; }
+.packman-pad { display: grid; grid-template-areas: ". up ." "left down right"; grid-template-columns: repeat(3, 44px); gap: 6px; justify-content: center; margin-top: 18px; }
+.packman-pad button { width: 44px; height: 44px; border: 1px solid #3a5771; border-radius: 9px; background: #19334d; color: #e5f0fa; font-size: 22px; cursor: pointer; touch-action: manipulation; }
+.packman-pad button:hover, .packman-pad button:active { background: #254c6d; }
+.packman-pad button:focus-visible { outline: 2px solid #00c081; outline-offset: 2px; }
+.packman-pad [data-packman-direction="1"] { grid-area: up; }
+.packman-pad [data-packman-direction="0"] { grid-area: left; }
+.packman-pad [data-packman-direction="3"] { grid-area: down; }
+.packman-pad [data-packman-direction="2"] { grid-area: right; }
+.packman-instructions { color: #75838f; font-size: 12px; line-height: 1.8; text-align: center; margin: 20px 0 0; }
+@media (max-width: 600px) { .packman-machine { padding: 12px; } .packman-silent { display: none; } .packman-scoreboard strong { font-size: 18px; } }

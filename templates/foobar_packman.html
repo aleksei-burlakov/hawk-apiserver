@@ -1,12 +1,21 @@
 {{ define "content" }}
 <link rel="stylesheet" href="/static/css/foobar.css">
-<div class="foobar-page">
+<link rel="stylesheet" href="/static/css/packman.css">
+<script src="/static/js/packman.js" defer></script>
+<div class="foobar-page packman-page">
   <a class="foobar-back" href="/cib/live/foobar">&#8592; Back to FOOBAR</a>
-  <div class="foobar-intro">
-    <p class="foobar-eyebrow">Arcade classic</p>
-    <h1>Packman</h1>
-    <p>The game will be added in the next step.</p>
+  <div class="packman-heading"><div><p class="foobar-eyebrow">Arcade classic</p><h1>Packman</h1></div><span class="packman-silent">Silent arcade</span></div>
+  <div class="packman-machine">
+    <div class="packman-scoreboard" aria-label="Game statistics">
+      <div>Score<strong id="packman-score">0</strong></div><div>Best<strong id="packman-best">0</strong></div><div>Level<strong id="packman-level">1</strong></div><div>Lives<strong id="packman-lives">3</strong></div>
+    </div>
+    <canvas id="packman-board" width="456" height="504" tabindex="0" aria-label="Packman maze. Use arrow keys or WASD to move, Space to pause, and Enter to start." aria-describedby="packman-status"></canvas>
+    <p id="packman-status" role="status" aria-live="polite">Use arrow keys or WASD. Press Start to play.</p>
+    <div class="packman-actions"><button id="packman-start" class="btn btn-primary" type="button">Start game</button><button id="packman-pause" class="btn btn-default" type="button" disabled>Pause</button></div>
+    <div class="packman-pad" role="group" aria-label="Movement controls">
+      <button type="button" data-packman-direction="1" aria-label="Move up">&#8593;</button><button type="button" data-packman-direction="0" aria-label="Move left">&#8592;</button><button type="button" data-packman-direction="3" aria-label="Move down">&#8595;</button><button type="button" data-packman-direction="2" aria-label="Move right">&#8594;</button>
+    </div>
   </div>
-  <div class="foobar-packman-preview"><img src="/static/img/foobar/packman.svg" alt="Packman and a ghost in an arcade maze"></div>
+  <p class="packman-instructions">Arrow keys / WASD to move &middot; Space / P to pause &middot; R to restart<br>Dots: 10 points &middot; Power pellets: 50 &middot; Ghosts: 200+ &middot; Extra life at 10,000</p>
 </div>
 {{ end }}
