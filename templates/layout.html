@@ -108,6 +108,11 @@
               <li class="submenu"><a href="{{ $cibBase }}/users">Targets</a></li>
             </ul>
           </li>
+          {{ if not .BatchMode }}
+          <li class="panel" id="foobar-navigation" hidden>
+            <a href="/cib/live/foobar"><i class="fas fa-flask" aria-hidden="true"></i> FOOBAR</a>
+          </li>
+          {{ end }}
         </ul>
       </aside>
 

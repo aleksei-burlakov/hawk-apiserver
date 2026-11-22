@@ -1,3 +1,19 @@
+// Advanced options are a browser-session preference shared with the profile.
+function advancedOptionsEnabled() {
+    return document.cookie.split(";").some(cookie => cookie.trim() === "advancedoptions=true");
+}
+
+function updateAdvancedOptionsMenu() {
+    const item = document.getElementById("foobar-navigation");
+    if (item) {
+        item.hidden = !advancedOptionsEnabled();
+        const link = item.querySelector("a");
+        if (/^\/cib\/live\/foobar(?:\/|$)/.test(window.location.pathname)) {
+            link.setAttribute("aria-current", "page");
+        }
+    }
+}
+
 // The status page and its popups use the same components for live and batch
 // mode. Only request execution and editor URLs depend on the selected CIB.
 function statusCIBBase() {

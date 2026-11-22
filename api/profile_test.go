@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -80,5 +81,113 @@ func TestProfileRevertAndInvalidRequests(t *testing.T) {
 		if test.status == 303 {
 			require.Equal(t, "/cib/live/profile/edit", response.Header().Get("Location"))
 		}
+	}
+}
+
+func TestProfileAdvancedOptions(t *testing.T) {
+	for _, enabled := range []bool{true, false} {
+		for _, scheme := range []string{"http", "https"} {
+			request := httptest.NewRequest("POST", scheme+"://hawk.test/api/profile/advanced-options", strings.NewReader(fmt.Sprintf(`{"enabled":%t}`, enabled)))
+			request.Header.Set("Content-Type", "application/json; charset=utf-8")
+			request.AddCookie(&http.Cookie{Name: "stonithwarning", Value: "false"})
+			response := httptest.NewRecorder()
+			ProfileAdvancedOptionsHandler(response, request)
+			require.Equal(t, 200, response.Code, response.Body.String())
+			require.Equal(t, "no-store", response.Header().Get("Cache-Control"))
+			cookies := response.Result().Cookies()
+			require.Len(t, cookies, 1)
+			cookie := cookies[0]
+			require.Equal(t, advancedOptionsCookie, cookie.Name)
+			require.Equal(t, "/", cookie.Path)
+			require.Equal(t, scheme == "https", cookie.Secure)
+			require.Equal(t, http.SameSiteLaxMode, cookie.SameSite)
+			require.False(t, cookie.HttpOnly, "The shared sidebar reads this display preference")
+			if enabled {
+				require.Equal(t, "true", cookie.Value)
+				require.Zero(t, cookie.MaxAge, "Use the same browser-session lifetime as other profile preferences")
+				require.JSONEq(t, `{"enabled":true,"message":"FOOBAR is unlocked"}`, response.Body.String())
+			} else {
+				require.Equal(t, -1, cookie.MaxAge)
+				require.JSONEq(t, `{"enabled":false,"message":"Advanced options disabled"}`, response.Body.String())
+			}
+		}
+	}
+}
+
+func TestProfileAdvancedOptionsRejectsInvalidRequests(t *testing.T) {
+	for _, tt := range []struct {
+		method, contentType, body string
+		status                    int
+	}{
+		{"GET", "", "", 405},
+		{"POST", "application/x-www-form-urlencoded", "enabled=true", 415},
+		{"POST", "application/json", `{}`, 400},
+		{"POST", "application/json", `{"enabled":null}`, 400},
+		{"POST", "application/json", `{"enabled":"true"}`, 400},
+		{"POST", "application/json", `{"enabled":true,"unexpected":true}`, 400},
+		{"POST", "application/json", `{"enabled":true} {}`, 400},
+		{"POST", "application/json", `{"enabled":true`, 400},
+		{"POST", "application/json", `{"enabled":true}` + strings.Repeat(" ", 1024), 400},
+	} {
+		request := httptest.NewRequest(tt.method, "/api/profile/advanced-options", strings.NewReader(tt.body))
+		request.Header.Set("Content-Type", tt.contentType)
+		response := httptest.NewRecorder()
+		ProfileAdvancedOptionsHandler(response, request)
+		require.Equal(t, tt.status, response.Code, response.Body.String())
+		require.Empty(t, response.Result().Cookies(), "Invalid requests must not change the preference")
+	}
+}
+
+func TestFoobarVisibilityPreference(t *testing.T) {
+	cwd, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(".."))
+	t.Cleanup(func() { _ = os.Chdir(cwd) })
+	for _, value := range []string{"", "false", "invalid", "true"} {
+		request := httptest.NewRequest("GET", "/cib/live/profile/edit", nil)
+		if value != "" {
+			request.AddCookie(&http.Cookie{Name: advancedOptionsCookie, Value: value})
+		}
+		response := httptest.NewRecorder()
+		ProfileHandler(response, request)
+		require.Equal(t, 200, response.Code)
+		require.Contains(t, response.Body.String(), `id="foobar-navigation" hidden`)
+		require.Contains(t, response.Body.String(), `role="switch" id="profile_advanced_options"`)
+		if value == "true" {
+			require.Contains(t, response.Body.String(), `aria-describedby="profile-advanced-help" checked`)
+		} else {
+			require.NotContains(t, response.Body.String(), `aria-describedby="profile-advanced-help" checked`)
+		}
+		for _, method := range []string{"GET", "HEAD"} {
+			for _, path := range []string{"/cib/live/foobar", "/cib/live/foobar/", "/cib/live/foobar/packman", "/cib/live/foobar/packman/"} {
+				pageRequest := httptest.NewRequest(method, path, nil)
+				for _, cookie := range request.Cookies() {
+					pageRequest.AddCookie(cookie)
+				}
+				page := httptest.NewRecorder()
+				FoobarHandler(page, pageRequest)
+				if value == "true" {
+					require.Equal(t, 200, page.Code)
+					require.Contains(t, page.Body.String(), "Packman")
+					if strings.Contains(path, "/packman") {
+						require.Contains(t, page.Body.String(), "Back to FOOBAR")
+					} else {
+						require.Contains(t, page.Body.String(), `href="/cib/live/foobar/packman"`)
+						require.Contains(t, page.Body.String(), `type="button" disabled`)
+					}
+				} else {
+					require.Equal(t, 303, page.Code)
+					require.Equal(t, "/cib/live/profile/edit", page.Header().Get("Location"))
+				}
+			}
+		}
+	}
+	for _, tt := range []struct {
+		method, path string
+		status       int
+	}{{"POST", "/cib/live/foobar", 405}, {"GET", "/cib/live/foobar/unknown", 404}} {
+		response := httptest.NewRecorder()
+		FoobarHandler(response, httptest.NewRequest(tt.method, tt.path, nil))
+		require.Equal(t, tt.status, response.Code)
 	}
 }

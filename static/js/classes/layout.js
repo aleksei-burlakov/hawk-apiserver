@@ -1,3 +1,5 @@
+updateAdvancedOptionsMenu();
+
 async function updateClusterStatusIndicator() {
 
   const statusRes = await statusFetch("/api/cib/cluster/details/fetch", {

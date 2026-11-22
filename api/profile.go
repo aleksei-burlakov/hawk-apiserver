@@ -1,6 +1,57 @@
 package api
 
-import "net/http"
+import (
+	"encoding/json"
+	"io"
+	"mime"
+	"net/http"
+)
+
+const advancedOptionsCookie = "advancedoptions"
+
+func profileAdvancedOptionsEnabled(r *http.Request) bool {
+	cookie, err := r.Cookie(advancedOptionsCookie)
+	return err == nil && cookie.Value == "true"
+}
+
+// Advanced options are a display preference, not an authorization grant.
+func ProfileAdvancedOptionsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", "POST")
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil || mediaType != "application/json" {
+		http.Error(w, "Expected application/json", http.StatusUnsupportedMediaType)
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, 1024)
+	var input struct {
+		Enabled *bool `json:"enabled"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&input); err != nil || input.Enabled == nil {
+		http.Error(w, "Invalid advanced options preference", http.StatusBadRequest)
+		return
+	}
+	if err := decoder.Decode(new(any)); err != io.EOF {
+		http.Error(w, "Invalid advanced options preference", http.StatusBadRequest)
+		return
+	}
+	cookie := &http.Cookie{Name: advancedOptionsCookie, Value: "true", Path: "/", Secure: r.TLS != nil, SameSite: http.SameSiteLaxMode}
+	message := "FOOBAR is unlocked"
+	if !*input.Enabled {
+		cookie.Value = ""
+		cookie.MaxAge = -1
+		message = "Advanced options disabled"
+	}
+	http.SetCookie(w, cookie)
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	_ = json.NewEncoder(w).Encode(map[string]any{"enabled": *input.Enabled, "message": message})
+}
 
 func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 	const editPath = "/cib/live/profile/edit"
@@ -43,5 +94,5 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("updated") == "true" {
 		message = "Preferences updated successfully"
 	}
-	renderTemplate(w, "profile", map[string]any{"Title": "Preferences", "Warning": warning, "Message": message})
+	renderTemplate(w, "profile", map[string]any{"Title": "Preferences", "Warning": warning, "Message": message, "AdvancedOptions": profileAdvancedOptionsEnabled(r)})
 }

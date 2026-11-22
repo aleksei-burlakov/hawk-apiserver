@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 240">
+ <defs><linearGradient id="sun" x2="0" y2="1"><stop stop-color="#ffd9b1"/><stop offset="1" stop-color="#ed8cc4"/></linearGradient></defs>
+ <circle cx="240" cy="122" r="97" fill="url(#sun)" opacity=".25"/>
+ <g stroke="#d88cb9" opacity=".24"><path d="M0 192H480M0 208H480M0 224H480M135 240L210 176M345 240L270 176M240 176V240"/></g>
+ <text x="240" y="142" text-anchor="middle" font-family="Impact,Arial Black,sans-serif" font-size="104" font-weight="900" fill="#fff" stroke="#27213e" stroke-width="7" paint-order="stroke">GTA</text>
+ <text x="240" y="203" text-anchor="middle" font-family="Arial Black,sans-serif" font-size="61" font-weight="900" letter-spacing="4" fill="url(#sun)">VI</text>
+ <path d="M79 181Q94 119 89 78M89 83Q68 64 44 81M89 83Q109 59 134 71M89 83Q99 91 121 99M89 83Q67 89 58 109M403 181Q388 119 393 78M393 83Q414 64 438 81M393 83Q373 59 348 71M393 83Q383 91 361 99M393 83Q415 89 424 109" stroke="#1c1b34" stroke-width="7" fill="none" stroke-linecap="round"/>
+</svg>

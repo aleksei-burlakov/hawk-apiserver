@@ -32,3 +32,46 @@ if (profileURL.searchParams.has("updated")) {
     profileURL.searchParams.delete("updated");
     history.replaceState({}, "", profileURL);
 }
+
+const advancedOptionsToggle = document.getElementById("profile_advanced_options");
+
+async function saveAdvancedOptions(enabled) {
+    advancedOptionsToggle.disabled = true;
+    try {
+        const response = await fetch("/api/profile/advanced-options", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ enabled }),
+        });
+        if (!response.ok) throw new Error(await response.text() || "Unable to save advanced options.");
+        const result = await response.json();
+        showProfileNotification(result.message);
+    } catch (error) {
+        showProfileNotification(error.message, "danger");
+    } finally {
+        advancedOptionsToggle.checked = advancedOptionsEnabled();
+        advancedOptionsToggle.disabled = false;
+        updateAdvancedOptionsMenu();
+    }
+}
+
+function showProfileNotification(message, type = "success") {
+    const alert = document.createElement("x-alert");
+    alert.setAttribute("type", type);
+    alert.setAttribute("message", message);
+    alert.setAttribute("visible", "true");
+    document.getElementById("profile-notifications").replaceChildren(alert);
+}
+
+advancedOptionsToggle.addEventListener("change", () => {
+    const enabled = advancedOptionsToggle.checked;
+    // Keep the saved state until the user confirms and the request succeeds.
+    advancedOptionsToggle.checked = advancedOptionsEnabled();
+    if (enabled) {
+        new ConfirmActionPopup(null, null,
+            "Are you sure you want to enable advanced options, special permissions are required?",
+            null, () => saveAdvancedOptions(true));
+    } else {
+        saveAdvancedOptions(false);
+    }
+});

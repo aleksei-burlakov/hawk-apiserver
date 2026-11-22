@@ -1,0 +1,27 @@
+{{ define "content" }}
+<link rel="stylesheet" href="/static/css/foobar.css">
+<div class="foobar-page">
+  <h1><i class="fa fa-flask" aria-hidden="true"></i> FOOBAR</h1>
+  <div class="foobar-intro">
+    <p class="foobar-eyebrow">The playground</p>
+    <h2>Pick your next adventure.</h2>
+    <p>A little nostalgia. A little anticipation. Choose your game.</p>
+  </div>
+  <div class="foobar-games" role="group" aria-label="Games">
+    <a class="foobar-game foobar-game--packman" href="/cib/live/foobar/packman" aria-label="Open Packman">
+      <span class="foobar-game-status">Arcade classic</span>
+      <img src="/static/img/foobar/packman.svg" alt="" aria-hidden="true">
+      <span class="foobar-game-name">Packman</span>
+      <span class="foobar-game-description">Follow the dots. Dodge the ghosts. Chase the high score.</span>
+      <span class="foobar-game-footer">Explore Packman <span class="foobar-game-arrow" aria-hidden="true">&#8594;</span></span>
+    </a>
+    <button class="foobar-game foobar-game--gta" type="button" disabled aria-describedby="foobar-gta-status">
+      <span class="foobar-game-status">Coming soon</span>
+      <img src="/static/img/foobar/gta6.svg" alt="" aria-hidden="true">
+      <span class="foobar-game-name">GTA 6</span>
+      <span class="foobar-game-description">Neon skies. Open roads. A whole new playground.</span>
+      <span class="foobar-game-footer" id="foobar-gta-status">Not implemented yet <i class="fa fa-lock" aria-hidden="true"></i></span>
+    </button>
+  </div>
+</div>
+{{ end }}
