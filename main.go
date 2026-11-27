@@ -32,6 +32,17 @@ func nativeFallback(monitor http.Handler) http.Handler {
 	})
 }
 
+func postOnly(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.Header().Set("Allow", http.MethodPost)
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		next(w, r)
+	}
+}
+
 // the released version of the binary. Generated via makefile or buildsystem
 var version = "was not built correctly"
 
@@ -247,6 +258,15 @@ func main() {
 	mux.HandleFunc("/api/cib/resource/delete", authMiddleware(api.ResourceDeleteHandler))
 	mux.HandleFunc("/api/cib/resource/stop", authMiddleware(api.ResourceStopHandler))
 	mux.HandleFunc("/api/cib/resource/start", authMiddleware(api.ResourceStartHandler))
+	mux.HandleFunc("/api/mcp/v1/resources/start", postOnly(authMiddleware(api.ResourceStartHandler)))
+	mux.HandleFunc("/api/mcp/v1/resources/stop", postOnly(authMiddleware(api.ResourceStopHandler)))
+	mux.HandleFunc("/api/mcp/v1/resources/maintenance-on", postOnly(authMiddleware(api.ResourceMaintenanceOnHandler)))
+	mux.HandleFunc("/api/mcp/v1/resources/maintenance-off", postOnly(authMiddleware(api.ResourceMaintenanceOffHandler)))
+	mux.HandleFunc("/api/mcp/v1/resources/promote", postOnly(authMiddleware(api.ClonePromoteHandler)))
+	mux.HandleFunc("/api/mcp/v1/resources/demote", postOnly(authMiddleware(api.CloneDemoteHandler)))
+	mux.HandleFunc("/api/mcp/v1/resources/migrate", postOnly(authMiddleware(api.ResourceMigrateHandler)))
+	mux.HandleFunc("/api/mcp/v1/resources/cleanup", postOnly(authMiddleware(api.ResourceCleanupHandler)))
+	mux.HandleFunc("/api/mcp/v1/resources/clear", postOnly(authMiddleware(api.ResourceClearHandler)))
 	mux.HandleFunc("/api/cib/clone/promote", authMiddleware(api.ClonePromoteHandler))
 	mux.HandleFunc("/api/cib/clone/demote", authMiddleware(api.CloneDemoteHandler))
 	mux.HandleFunc("/api/cib/resource/maintenance-on", authMiddleware(api.ResourceMaintenanceOnHandler))
